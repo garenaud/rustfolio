@@ -1,47 +1,112 @@
-# hello-rs
+# Rustfolio — apprentissage Rust + Axum
 
-Petit projet d'apprentissage Rust (WSL/Docker-friendly).
+Ce repo contient mes exercices et projets d'apprentissage Rust, en commençant par un Hello World CLI jusqu'à un serveur web avec Axum.
 
-## Objectifs pédagogiques
-- Types de base (i32, u32, f64, String, etc.)
-- Fonctions pures et tests unitaires (`cargo test`)
-- (À venir) Arguments CLI, gestion d'erreurs (`Result`)
-- (À venir) Mini serveur web avec Axum
+## Projets inclus
+- **hello-rs** : apprentissage des bases Rust (variables, fonctions, tests, CLI, Result)
+- **web-hello** : premier serveur web avec Axum
+
+---
 
 ## Pré-requis
 - Docker Desktop (WSL2 activé)
 - `docker compose`
 
-## Démarrer un shell de dev
+---
+
+## Utilisation en dev
+
+### Démarrer un shell Rust dans Docker
 ```bash
-docker compose run --rm dev
+docker compose run --rm --service-ports dev
 ```
 
-## Créer / lancer
+### Créer un nouveau projet
 ```bash
-cargo new hello-rs --bin
-cd hello-rs
+cargo new <nom-projet> --bin
+cd <nom-projet>
+```
+
+---
+
+## Projet 1 : hello-rs
+
+Objectifs :
+- Types de base (i32, u32, f64, String…)
+- Fonctions pures et tests unitaires (`cargo test`)
+- Arguments CLI (`std::env::args`)
+- Gestion d’erreur propre (`Result`, `eprintln!`, `exit code`)
+
+Exemple :
+```bash
+cargo run -- Bob
+# Hello, Bob!
+```
+
+---
+
+## Projet 2 : web-hello (Axum)
+
+Objectifs :
+- Découverte d’Axum + Tokio
+- Première route HTTP (`/`)
+- Route de santé (`/health`)
+
+### Dépendances
+Dans `Cargo.toml` :
+```toml
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+```
+
+### Exemple minimal
+```rust
+use axum::{routing::get, Router, serve};
+use tokio::net::TcpListener;
+use std::net::SocketAddr;
+
+async fn hello() -> &'static str { "Hello, Rust! 🚀" }
+async fn health() -> &'static str { "OK" }
+
+#[tokio::main]
+async fn main() {
+    let app = Router::new()
+        .route("/", get(hello))
+        .route("/health", get(health));
+
+    let addr = SocketAddr::from(([0,0,0,0], 8080));
+    println!("listening on http://{addr}");
+
+    let listener = TcpListener::bind(addr).await.unwrap();
+    serve(listener, app).await.unwrap();
+}
+```
+
+### Lancer le serveur
+```bash
 cargo run
-cargo test
 ```
 
-## Commandes utiles
-- `cargo fmt` — formatage
-- `cargo clippy -- -D warnings` — lint strict
-- `cargo run -- Bob` — exécuter avec un argument (pour l'exo CLI)
+Puis tester :
+```bash
+curl http://localhost:8080/
+# Hello, Rust! 🚀
 
-## Structure
+curl http://localhost:8080/health
+# OK
 ```
-hello-rs/
-  Cargo.toml
-  src/
-    main.rs
-```
+
+---
 
 ## Roadmap
-- [x] Hello World
-- [x] Variables, mutabilité, shadowing
-- [x] Fonctions + tests (Exo 3)
-- [ ] Arguments CLI (Exo 4)
-- [ ] Gestion d’erreur avec Result (Exo 5)
-- [ ] Serveur Axum (Hello + /health)
+- [x] Hello World CLI (`hello-rs`)
+- [x] Variables / mutabilité / tests unitaires
+- [x] Arguments CLI + gestion d’erreurs (`Result`)
+- [x] Premier serveur Axum (`web-hello`)
+- [x] Route `/health`
+- [ ] Retourner du JSON
+- [ ] Servir des fichiers statiques
+- [ ] Templates (Askama/Tera)
+- [ ] Formulaire de contact
+- [ ] Dockerisation prod
+- [ ] CI/CD GitHub Actions

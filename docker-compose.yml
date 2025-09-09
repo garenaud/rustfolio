@@ -7,6 +7,8 @@ services:
       - cargo-registry:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
       - target-cache:/app/target
+    ports:
+      - "8080:8080"
     stdin_open: true
     tty: true
 volumes:

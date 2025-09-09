@@ -1,19 +1,19 @@
-fn add(a: i32, b: i32) -> i32 {
-    a + b
-}
-
 fn main() {
-    let a = 2;
-    let b = 40;
-    println!("{} + {} = {}", a, b, add(a, b));
+    if let Err(e) = real_main() {
+        eprintln!("Error: {e}");
+        std::process::exit(1);
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+fn real_main() -> Result<(), String> {
+    let mut args = std::env::args();
+    let maybe_name = args.nth(1);
 
-    #[test]
-    fn adds() {
-        assert_eq!(add(2, 40), 42);
+    match maybe_name {
+        Some(name) => {
+            println!("Hello, {name}!");
+            Ok(())
+        }
+        None => Err("Please provide a name as a command-line argument.".to_string()),
     }
 }
