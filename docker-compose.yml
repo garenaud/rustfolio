@@ -1,0 +1,15 @@
+services:
+  dev:
+    image: rust:1.80-slim
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - cargo-registry:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - target-cache:/app/target
+    stdin_open: true
+    tty: true
+volumes:
+  cargo-registry:
+  cargo-git:
+  target-cache:
