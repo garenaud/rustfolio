@@ -1,0 +1,8 @@
+[package]
+name = "exercice03-propriete"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "exercice03"
+path = "src/main.rs"
