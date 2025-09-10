@@ -1,0 +1,48 @@
+[
+    {
+      "title": "TRANSCENDENCE - WEBSITE AVEC UN PONG MULTIJOUEUR",
+      "description": "Développement d’un site de jeu Pong multijoueur, avec un frontend en JavaScript natif, implémentant une structure inspirée de React sans utiliser de framework. Backend géré par Django, permettant interactions et jeu en temps réel entre utilisateurs.",
+      "category": "Web",
+      "technologies": ["JavaScript", "Django"],
+      "repoLink": "https://github.com/yourusername/transcendence",
+      "pdfLink": "https://github.com/yourusername/transcendence/blob/main/docs/Transcendence.pdf",
+      "image": "/images/projects/transcendence.png"
+    },
+    {
+      "title": "INCEPTION - INFRASTRUCTURE WEB SÉCURISÉE AVEC DOCKER",
+      "description": "Configuration de services Dockerisés sur VM personnelle pour un système de gestion web intégral incluant NGINX avec TLS, WordPress via php-fpm, et MariaDB, assurant interconnectivité et redémarrage automatique sur incident.",
+      "category": "Web",
+      "technologies": ["Docker", "NGINX", "WordPress", "MariaDB"],
+      "repoLink": "https://github.com/garenaud/Inception",
+      "pdfLink": "https://github.com/garenaud/Inception/blob/main/Inception.subject.pdf",
+      "image": "/images/projects/inception.webp"
+    },
+    {
+      "title": "IRC - SERVEUR IRC EN C++98",
+      "description": "Développement d’un serveur conforme aux standards IRC, capable de gérer la connexion simultanée de multiples clients, authentification, et commandes de chat, sans blocage ni fork.",
+      "category": "C++",
+      "technologies": ["C++"],
+      "repoLink": "https://github.com/garenaud/FT_IRC",
+      "pdfLink": "https://github.com/garenaud/FT_IRC/blob/master/IRC.subject.pdf",
+      "image": "/images/projects/irc.png"
+    },
+    {
+      "title": "MINIRT - RAYTRACER EN C AVEC MINILIBX",
+      "description": "Responsable du parsing des scènes et co-développeur des fonctions mathématiques, en peer-programming, pour le rendu d'images 3D générées par ordinateur.",
+      "category": "C",
+      "technologies": ["C"],
+      "repoLink": "https://github.com/garenaud/MiniRT",
+      "pdfLink": "https://github.com/garenaud/MiniRT/blob/master/ReadmeFiles/MiniRT.subject.pdf",
+      "image": "/images/projects/minirt.png"
+    },
+    {
+      "title": "MINISHELL - SHELL TYPE BASH EN C",
+      "description": "Développement et gestion de l'exécution via execve et implémentation des commandes internes (builtins) comme cd, pwd, echo. Gestion fine des processus et des signaux dans un environnement Unix.",
+      "category": "C",
+      "technologies": ["C", "Unix"],
+      "repoLink": "https://github.com/garenaud/Minishell",
+      "pdfLink": "https://github.com/garenaud/Minishell/blob/master/Minishell.subject.pdf",
+      "image": "/images/projects/minishell.png"
+    }
+  ]
+  

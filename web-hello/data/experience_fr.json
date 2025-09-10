@@ -1,0 +1,99 @@
+[
+  {
+    "date": "2002 - 2006",
+    "type": "school",
+    "title": "Apprentissage de Polygraphe",
+    "company": "Imprimerie Gasser",
+    "location": "2400 Le Locle",
+    "tasks": [
+      "Communications avec les clients",
+      "Mise en page d’un journal hebdomadaire",
+      "Travaux de ville, Utilisation du CTP"
+    ]
+  },
+  {
+    "date": "2006 - 2007",
+    "type": "work",
+    "title": "Polygraphe",
+    "company": "Redatech",
+    "location": "2300 La Chaux-de-Fonds",
+    "tasks": [
+      "Mise en page de manuels technique"
+    ]
+  },
+  {
+    "date": "2007 - 2008",
+    "type": "work",
+    "title": "Polygraphe",
+    "company": "Imprimerie Contact",
+    "location": "1260 Nyon",
+    "tasks": [
+      "Travaux de ville"
+    ]
+  },
+  {
+    "date": "2008 - 2009",
+    "type": "work",
+    "title": "Polygraphe",
+    "company": "Imprimerie Gessler",
+    "location": "2013 Colombier",
+    "tasks": [
+      "Communications avec les clients",
+      "Mise en page d’un journal hebdomadaire",
+      "Travaux de ville, Utilisation du CTP"
+    ]
+  },
+  {
+    "date": "2010 - 2012",
+    "type": "work",
+    "title": "Polygraphe",
+    "company": "Urech",
+    "location": "2000 Neuchâtel",
+    "tasks": [
+      "Mise en page du catalogue de vente et dépliants en français et en allemand",
+      "Prises de vue de certains produits",
+      "Création de contenu pour le site internet",
+      "Réalisation de support publicitaires"
+    ]
+  },
+  {
+    "date": "2012 - 2017",
+    "type": "work",
+    "title": "Polygraphe",
+    "company": "VAC",
+    "location": "2300 La Chaux-de-Fonds",
+    "tasks": [
+      "Mise en page du catalogue de vente et dépliants en français et en allemand",
+      "Création de bandeaux et vignettes pour le site internet",
+      "Gestion du flux de production sur plotter",
+      "Traitement d’images numériques et détourages",
+      "Responsable du contrôle des fichiers avant l’envoi à l’imprimeur",
+      "Réalisation de support publicitaires pour l’entreprise"
+    ]
+  },
+  {
+    "date": "2020",
+    "type": "work",
+    "title": "UI Designer",
+    "company": "Groundwork Open Source",
+    "location": "Petaluma, CA",
+    "tasks": [
+      "Création de logos et d’icônes et autres tâches graphiques",
+      "Communication avec les développeurs",
+      "Design de l’interface de la web application sur Adobe XD",
+      "Réalisation de support publicitaires"
+    ]
+  },
+  {
+    "date": "2020",
+    "type": "work",
+    "title": "UI Designer",
+    "company": "BlueSunrise",
+    "location": "Petaluma, CA",
+    "tasks": [
+      "Création de l'interface utilisateur pour la nouvelle application de monitoring de Diamanti (Diamanti Ultimate) sur Figma",
+      "Communication avec les développeurs",
+      "Recherche afin d'améliorer le UX de l'application"
+    ]
+  }
+]

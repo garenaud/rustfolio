@@ -1,10 +1,10 @@
 # Rustfolio — apprentissage Rust + Axum
 
-Ce repo contient mes exercices et projets d'apprentissage Rust, en commençant par un Hello World CLI jusqu'à un serveur web avec Axum.
+Ce repo contient mes exercices et projets d'apprentissage Rust, en commençant par un Hello World CLI jusqu'à un serveur web avec Axum, puis un début de portfolio avec templates et JSON.
 
 ## Projets inclus
 - **hello-rs** : apprentissage des bases Rust (variables, fonctions, tests, CLI, Result)
-- **web-hello** : premier serveur web avec Axum
+- **web-hello** : serveur web avec Axum (routes, JSON, POST, templates Askama, statiques)
 
 ---
 
@@ -18,8 +18,10 @@ Ce repo contient mes exercices et projets d'apprentissage Rust, en commençant p
 
 ### Démarrer un shell Rust dans Docker
 ```bash
-docker compose run --rm --service-ports dev
+docker compose up --build dev
 ```
+
+Hot reload activé avec `cargo-watch`.
 
 ### Créer un nouveau projet
 ```bash
@@ -49,52 +51,61 @@ cargo run -- Bob
 
 Objectifs :
 - Découverte d’Axum + Tokio
-- Première route HTTP (`/`)
-- Route de santé (`/health`)
+- Routes GET simples (`/`, `/health`)
+- Path params (`/hello/:name`)
+- Query params (`/greet?name=...`)
+- Retourner du JSON avec `serde::Serialize`
+- Recevoir du JSON (POST) avec `serde::Deserialize`
+- Réponses HTTP avec codes (`201 Created`, `400 Bad Request`)
+- Servir des fichiers statiques (CSS, images)
+- Intégrer un moteur de templates (Askama)
+- Charger des données JSON (expériences, projets, compétences) et les afficher
 
-### Dépendances
+### Dépendances principales
 Dans `Cargo.toml` :
 ```toml
 axum = "0.7"
 tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+askama = "0.12"
+askama_axum = "0.4"
+tower-http = { version = "0.5", features = ["fs"] }
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 ```
 
-### Exemple minimal
-```rust
-use axum::{routing::get, Router, serve};
-use tokio::net::TcpListener;
-use std::net::SocketAddr;
-
-async fn hello() -> &'static str { "Hello, Rust! 🚀" }
-async fn health() -> &'static str { "OK" }
-
-#[tokio::main]
-async fn main() {
-    let app = Router::new()
-        .route("/", get(hello))
-        .route("/health", get(health));
-
-    let addr = SocketAddr::from(([0,0,0,0], 8080));
-    println!("listening on http://{addr}");
-
-    let listener = TcpListener::bind(addr).await.unwrap();
-    serve(listener, app).await.unwrap();
-}
-```
-
-### Lancer le serveur
+### Exemple routes API
 ```bash
-cargo run
-```
-
-Puis tester :
-```bash
-curl http://localhost:8080/
-# Hello, Rust! 🚀
-
+# Route santé
 curl http://localhost:8080/health
 # OK
+
+# Path param
+curl http://localhost:8080/hello/Alice
+# Hello, Alice!
+
+# Query param
+curl "http://localhost:8080/greet?name=Bob"
+# Hello, Bob!
+
+# Retour JSON
+curl http://localhost:8080/api/info
+# {"status":"ok","app":"web-hello","version":"0.1.0"}
+
+# POST JSON (echo)
+curl -X POST http://localhost:8080/api/echo -H "Content-Type: application/json" -d '{"name":"Alice","age":30}'
+# {"name":"Alice","age":30}
+
+# POST JSON (register avec validations)
+curl -i -X POST http://localhost:8080/api/register -H "Content-Type: application/json" -d '{"name":"Alice","age":30}'
+# HTTP/1.1 201 Created
+# {"id":1,"name":"Alice","age":30}
 ```
+
+### Exemple templates
+- `templates/base.html` : layout principal
+- `templates/index.html` : page d’accueil avec nom, tagline, compétences, projets
+- CSS statique dans `assets/css/style.css`
 
 ---
 
@@ -104,9 +115,13 @@ curl http://localhost:8080/health
 - [x] Arguments CLI + gestion d’erreurs (`Result`)
 - [x] Premier serveur Axum (`web-hello`)
 - [x] Route `/health`
-- [ ] Retourner du JSON
-- [ ] Servir des fichiers statiques
-- [ ] Templates (Askama/Tera)
+- [x] Retourner du JSON (`/api/info`)
+- [x] Path params et Query params
+- [x] POST JSON (echo + register avec validation et codes HTTP)
+- [x] Servir des fichiers statiques (`/assets/...`)
+- [x] Templates (Askama)
+- [x] Charger du contenu JSON (expériences, projets, compétences)
+- [ ] Pages projets/contact complètes
 - [ ] Formulaire de contact
-- [ ] Dockerisation prod
+- [ ] Dockerisation prod multi-stage
 - [ ] CI/CD GitHub Actions

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ name }} — {{ title }}{% endblock %}
+{% block content %}
+  <h1>{{ name }}</h1>
+  <p>{{ tagline }}</p>
+
+  <h2>Compétences (extrait)</h2>
+  <ul>
+  {% for s in skills %}
+    <li>{{ s.name }} — {{ s.percentage }}%</li>
+  {% endfor %}
+  </ul>
+
+  <h2>Projets (extrait)</h2>
+  <ul>
+  {% for p in projects %}
+    <li><strong>{{ p.title }}</strong> — {{ p.category }}</li>
+  {% endfor %}
+  </ul>
+{% endblock %}

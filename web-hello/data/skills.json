@@ -1,0 +1,21 @@
+[
+    { "name": "InDesign", "percentage": 90, "logo": "/images/indesign.png", "category": "Design" },
+    { "name": "Illustrator", "percentage": 85, "logo": "/images/adobe-illustrator.png", "category": "Design" },
+    { "name": "Photoshop", "percentage": 88, "logo": "/images/photoshop.png", "category": "Design" },
+    { "name": "Adobe Acrobat", "percentage": 80, "logo": "/images/acrobate.png", "category": "Design" },
+    { "name": "JavaScript", "percentage": 75, "logo": "/images/js.png", "category": "Development" },
+    { "name": "TypeScript", "percentage": 65, "logo": "/images/typescript.png", "category": "Development" },
+    { "name": "HTML", "percentage": 95, "logo": "/images/html.png", "category": "Development" },
+    { "name": "CSS", "percentage": 85, "logo": "/images/css.png", "category": "Development" },
+    { "name": "Docker", "percentage": 70, "logo": "/images/docker.png", "category": "Development" },
+    { "name": "Figma", "percentage": 80, "logo": "/images/figma.png", "category": "Design" },
+    { "name": "C++", "percentage": 65, "logo": "/images/c-logo.png", "category": "Development" },
+    { "name": "C", "percentage": 60, "logo": "/images/c.png", "category": "Development" },
+    { "name": "React", "percentage": 50, "logo": "/images/react.png", "category": "Development" },
+    { "name": "PHP", "percentage": 40, "logo": "/images/php.png", "category": "Development" },
+    { "name": "Tailwind", "percentage": 40, "logo": "/images/tailwind.png", "category": "Development" },
+    { "name": "Next.js", "percentage": 50, "logo": "/images/next-js.svg", "category": "Development" },
+    { "name": "Wordpress", "percentage": 70, "logo": "/images/Wordpress.png", "category": "Design" },
+    { "name": "Material ui", "percentage": 70, "logo": "/images/MUI.png", "category": "Development" }
+  ]
+  
