@@ -16,7 +16,7 @@ async fn main() {
         .route("/", get(hello))
         ;
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     println!("Listening on http://{}", addr);
 
     let listener = TcpListener::bind(addr).await.unwrap();
