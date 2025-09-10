@@ -1,16 +1,30 @@
 services:
   dev:
-    image: rust:1.80-slim
-    working_dir: /app
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /app/web-hello
+    # Utilise le chemin absolu vers cargo + --poll + watch ciblé
+    command: ["/usr/local/cargo/bin/cargo", "watch",
+              "--poll",
+              "-w", "src",
+              "-w", "Cargo.toml",
+              "--why",
+              "-x", "run"]
+    ports:
+      - "8080:8080"
+    environment:
+      - RUST_LOG=info
+      # (optionnel) force le PATH si tu préfères la commande bash
+      # - PATH=/usr/local/cargo/bin:/usr/local/rustup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     volumes:
       - ./:/app
       - cargo-registry:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
-      - target-cache:/app/target
-    ports:
-      - "8080:8080"
+      - target-cache:/app/web-hello/target
     stdin_open: true
     tty: true
+
 volumes:
   cargo-registry:
   cargo-git:
