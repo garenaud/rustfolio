@@ -1,12 +1,4 @@
 mod data;
-mod filters {
-    use askama::Result;
-
-    // Équivalent d’un "default" basique pour des chaînes
-    pub fn default(input: &str, fallback: &str) -> Result<String> {
-        Ok(if input.is_empty() { fallback.to_owned() } else { input.to_owned() })
-    }
-}
 
 use axum::{
     extract::{Query, State},
@@ -43,6 +35,15 @@ struct ProjectsTpl<'a> {
     title: &'a str,
     tagline: &'a str,
     projects: &'a [data::Project],
+}
+
+#[derive(askama::Template)]
+#[template(path = "portfolio.html")]
+struct PortfolioTpl<'a> {
+    year: i32,
+    name: &'a str,
+    title: &'a str,
+    tagline: &'a str,
 }
 
 // ---------- State partagé ----------
@@ -110,6 +111,18 @@ async fn info_handler() -> Json<Info> {
     })
 }
 
+
+// --- Handler portfolio ---
+async fn portfolio_page(State(_st): State<AppState>) -> Result<Html<String>, (StatusCode, String)> {
+    let tpl = PortfolioTpl {
+        year: chrono::Utc::now().year(),
+        name: "Gaëtan Renaud",
+        title: "Développeur Rust",
+        tagline: "Rust • Web • Cloud",
+    };
+    tpl.render().map(Html).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
+}
+
 async fn health() -> &'static str {
     "OK"
 }
@@ -166,12 +179,14 @@ async fn main() {
         // pages SSR
         .route("/", get(home))
         .route("/projects", get(projects_page))
+        .route("/portfolio", get(portfolio_page))
         // API
         .route("/api/info", get(info_handler))
         .route("/api/projects", get(api_projects))
         // santé & statiques
         .route("/health", get(health))
         .nest_service("/assets", ServeDir::new("assets"))
+        .nest_service("/data", ServeDir::new("data"))
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));

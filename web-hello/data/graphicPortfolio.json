@@ -1,0 +1,75 @@
+[
+    {
+      "title": "Journal d'entreprise",
+      "image": "/assets/img/portfolio/BeliEF_November_Page_01-1.jpg",
+      "description": "Journal BeliEF de l'école EF de Chicago.",
+      "type": "journal"
+    },
+    {
+        "title": "feuillet cd",
+        "image": "/assets/img/portfolio/BetterWithSoul_Cover.jpg",
+        "description": "Feuillet pour un CD",
+        "type": "feuillet"
+    },
+    {
+        "title": "feuillet cd",
+        "image": "/assets/img/portfolio/BetterWithSoul_Page_02.jpg",
+        "description": "Feuillet pour un CD",
+        "type": "feuillet"
+    },
+    {
+        "title": "feuillet cd",
+        "image": "/assets/img/portfolio/BetterWithSoul_Page_13.jpg",
+        "description": "Feuillet pour un CD",
+        "type": "feuillet"
+    },
+    {
+      "title": "Calendrier Publicitaire",
+      "image": "/assets/img/portfolio/Calendrier_LaSagne_cover.pdf",
+      "description": "Calendrier pour le collège de la Sagne",
+      "type": "Calendrier"
+    },
+    {
+        "title": "Calendrier Publicitaire",
+        "image": "/assets/img/portfolio/Calendrier_LaSagne_int.pdf",
+        "description": "Calendrier pour le collège de la Sagne",
+        "type": "Calendrier"
+    },
+    {
+      "title": "Logo pour un garage",
+      "image": "/assets/img/portfolio/LogoCoitaProp3.png",
+      "description": "Logo pour le garage Coita",
+      "type": "Logo"
+    },
+    {
+      "title": "Logo pour la jeunesse de La Sagne",
+      "image": "/assets/img/portfolio/LogoJeunesseLaSagne.png",
+      "description": "Logo pour la jeunesse de La Sagne",
+      "type": "Logo"
+    },
+    {
+      "title": "Logo pour une osthéopate animalière",
+      "image": "/assets/img/portfolio/LogoNadine.png",
+      "description": "Nadine Renaud, ostéopathe animalière",
+      "type": "Logo"
+    },
+    {
+      "title": "Logo pour une api",
+      "image": "/assets/img/portfolio/LogoTCG.png",
+      "description": "TCG",
+      "type": "Logo"
+    },
+    {
+        "title": "Logo pour une api",
+        "image": "/assets/img/portfolio/LogoGort.png",
+        "description": "TCG",
+        "type": "Logo"
+    },
+    {
+      "title": "Logo personnel",
+      "image": "/assets/img/portfolio/LogoGbleu.png",
+      "description": "G",
+      "type": "Logo"
+    }
+  ]
+  

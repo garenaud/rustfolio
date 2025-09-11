@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Portfolio — {{ name }}{% endblock %}
+{% block nav_extra %}{% endblock %}
+{% block nav_projects_active %}{% endblock %}
+{% block nav_home_active %}{% endblock %}
+
+{% block content %}
+  <section class="hero projects-hero">
+    <h1>Portfolio</h1>
+    <p class="subtitle">{{ title }} · {{ tagline }}</p>
+
+    <form id="pf-filters" class="projects-filters" aria-label="Filtres portfolio">
+      <label class="hidden" for="pf-type">Type</label>
+      <select id="pf-type" name="type">
+        <option value="Tous">Tous</option>
+        <option value="journal">Journal</option>
+        <option value="feuillet">Feuillet</option>
+        <option value="Calendrier">Calendrier</option>
+        <option value="Logo">Logo</option>
+      </select>
+
+      <label class="hidden" for="pf-q">Recherche</label>
+      <input id="pf-q" type="search" name="q" placeholder="Rechercher un titre/description" autocomplete="off">
+
+      <button type="submit" class="btn">Filtrer</button>
+      <button type="button" id="pf-reset" class="btn ghost">Réinitialiser</button>
+    </form>
+  </section>
+
+  <section id="pf-grid" class="projects-grid" aria-live="polite" aria-busy="false">
+    <!-- remplissage dynamique -->
+  </section>
+
+  <!-- Dialog natif HTML pour l’aperçu -->
+  <dialog id="pf-modal">
+    <form method="dialog">
+      <button class="btn ghost" value="close" style="position:absolute; right:12px; top:12px;">Fermer</button>
+    </form>
+    <div id="pf-modal-content" class="stack-12" style="max-width:min(92vw,1000px)"></div>
+  </dialog>
+{% endblock %}
+
+{% block scripts %}
+  <script src="/assets/js/portfolio.js" defer></script>
+{% endblock %}
