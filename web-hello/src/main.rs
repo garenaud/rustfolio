@@ -1,17 +1,26 @@
 mod data;
+mod filters {
+    use askama::Result;
+
+    // Équivalent d’un "default" basique pour des chaînes
+    pub fn default(input: &str, fallback: &str) -> Result<String> {
+        Ok(if input.is_empty() { fallback.to_owned() } else { input.to_owned() })
+    }
+}
 
 use axum::{
     extract::{Query, State},
-    response::IntoResponse,
+    http::StatusCode,
+    response::Html, // <--- on utilise Html
     routing::get,
     Json, Router, serve,
 };
 use tokio::net::TcpListener;
 use std::{fs, net::SocketAddr, sync::Arc};
 use askama::Template;
-use askama_axum::IntoResponse as _; // permet `tpl.into_response()`
 use tower_http::services::ServeDir;
 use chrono::Datelike;
+//use askama::filters;
 
 // ---------- Templates SSR ----------
 
@@ -40,7 +49,7 @@ struct ProjectsTpl<'a> {
 
 #[derive(Clone)]
 struct AppState {
-    _experiences: Arc<Vec<data::Experience>>, // underscore = pas encore utilisé ici
+    _experiences: Arc<Vec<data::Experience>>,
     projects: Arc<Vec<data::Project>>,
     skills: Arc<Vec<data::Skill>>,
 }
@@ -49,15 +58,17 @@ struct AppState {
 
 #[derive(serde::Deserialize, Debug)]
 struct ProjectFilter {
-    q: Option<String>,        // recherche dans title/description
-    category: Option<String>, // match exact insensible à la casse
-    tech: Option<String>,     // match exact sur une techno
-    limit: Option<usize>,     // couper la liste
+    q: Option<String>,
+    category: Option<String>,
+    tech: Option<String>,
+    limit: Option<usize>,
 }
 
 // ---------- Handlers ----------
 
-async fn home(State(st): State<AppState>) -> impl IntoResponse {
+
+
+async fn home(State(st): State<AppState>) -> Result<Html<String>, (StatusCode, String)> {
     let tpl = IndexTemplate {
         year: chrono::Utc::now().year(),
         name: "Gaëtan Renaud",
@@ -66,18 +77,22 @@ async fn home(State(st): State<AppState>) -> impl IntoResponse {
         skills: &st.skills[..st.skills.len().min(5)],
         projects: &st.projects[..st.projects.len().min(3)],
     };
-    tpl.into_response()
+    tpl.render()
+        .map(Html)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
 }
 
-async fn projects_page(State(st): State<AppState>) -> impl IntoResponse {
-    ProjectsTpl {
+async fn projects_page(State(st): State<AppState>) -> Result<Html<String>, (StatusCode, String)> {
+    let tpl = ProjectsTpl {
         year: chrono::Utc::now().year(),
         name: "Gaëtan Renaud",
         title: "Développeur Rust",
         tagline: "Rust • Web • Cloud",
         projects: &st.projects,
-    }
-    .into_response() // matérialise une Response avant que `st` soit droppé (évite E0515)
+    };
+    tpl.render()
+        .map(Html)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
 }
 
 #[derive(serde::Serialize)]
@@ -103,7 +118,6 @@ async fn api_projects(
     State(st): State<AppState>,
     Query(f): Query<ProjectFilter>,
 ) -> Json<Vec<data::Project>> {
-    // nécessite `#[derive(Clone)]` sur data::Project (déjà ajouté côté data.rs)
     let mut out: Vec<data::Project> = st.projects.iter().cloned().collect();
     let norm = |s: &str| s.to_lowercase();
 
@@ -130,16 +144,13 @@ async fn api_projects(
 
 #[tokio::main]
 async fn main() {
-    // charge les JSON (chemins relatifs au crate)
-    let exp: Vec<data::Experience> = serde_json::from_str(
-        &fs::read_to_string("data/experience_fr.json").expect("read exp"),
-    )
-    .expect("parse exp");
+    let exp: Vec<data::Experience> =
+        serde_json::from_str(&fs::read_to_string("data/experience_fr.json").expect("read exp"))
+            .expect("parse exp");
 
-    let projects: Vec<data::Project> = serde_json::from_str(
-        &fs::read_to_string("data/projects.json").expect("read projects"),
-    )
-    .expect("parse projects");
+    let projects: Vec<data::Project> =
+        serde_json::from_str(&fs::read_to_string("data/projects.json").expect("read projects"))
+            .expect("parse projects");
 
     let skills: Vec<data::Skill> =
         serde_json::from_str(&fs::read_to_string("data/skills.json").expect("read skills"))

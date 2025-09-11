@@ -1,18 +1,36 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>{% block title %}Portfolio{% endblock %}</title>
   <link rel="stylesheet" href="/assets/css/style.css">
+  {% block head_extra %}{% endblock %}
 </head>
 <body>
   <header>
-    <nav><a href="/">Accueil</a> · <a href="/projects">Projets</a> · <a href="/contact">Contact</a></nav>
+    <nav class="navbar container">
+      <div class="brand">
+        {% block brand %}{{ name }}{% endblock %}
+      </div>
+      <a href="/" {% block nav_home_active %}{% endblock %}>Accueil</a>
+      <a href="/projects" {% block nav_projects_active %}{% endblock %}>Projets</a>
+      <a class="btn ghost" href="/api/projects">API</a>
+      {% block nav_extra %}{% endblock %}
+    </nav>
   </header>
-  <main>
+
+  <main class="container">
     {% block content %}{% endblock %}
   </main>
-  <footer><small>&copy; {{ year }}</small></footer>
+
+  <footer class="container">
+    <div class="stack-12">
+      <hr style="border:0; border-top:1px solid var(--border);"/>
+      <small>&copy; {{ year }} — {{ name }}</small>
+    </div>
+  </footer>
+
+  {% block scripts %}{% endblock %}
 </body>
 </html>

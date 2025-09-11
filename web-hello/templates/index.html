@@ -1,20 +1,50 @@
 {% extends "base.html" %}
 {% block title %}{{ name }} — {{ title }}{% endblock %}
+{% block nav_home_active %}aria-current="page"{% endblock %}
 {% block content %}
-  <h1>{{ name }}</h1>
-  <p>{{ tagline }}</p>
+  <section class="hero">
+    <h1>{{ name }}</h1>
+    <p class="subtitle">{{ title }} · {{ tagline }}</p>
 
-  <h2>Compétences (extrait)</h2>
-  <ul>
-  {% for s in skills %}
-    <li>{{ s.name }} — {{ s.percentage }}%</li>
-  {% endfor %}
-  </ul>
+    <div class="badges">
+      {% for s in skills %}
+        <span class="badge">{{ s.name }} — {{ s.percentage }}%</span>
+      {% endfor %}
+    </div>
+  </section>
 
-  <h2>Projets (extrait)</h2>
-  <ul>
-  {% for p in projects %}
-    <li><strong>{{ p.title }}</strong> — {{ p.category }}</li>
-  {% endfor %}
-  </ul>
+  <section class="grid">
+    {% for p in projects %}
+      <article class="card col-12 col-6 col-4">
+        {% if p.image != "" %}
+          <img src="{{ p.image }}" alt="{{ p.title }}"
+               style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;">
+        {% endif %}
+        <h3>{{ p.title }}</h3>
+
+        {% if p.category != "" %}
+          <p class="tag">{{ p.category }}</p>
+        {% endif %}
+
+        <p class="max-w-prose">{{ p.description }}</p>
+
+        {% if p.technologies.len() > 0 %}
+          <div class="tags" style="margin-top:10px;">
+            {% for t in p.technologies %}
+              <span class="tag">{{ t }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="stack-12" style="margin-top:12px;">
+          {% if p.repo_link != "" %}
+            <a class="btn" href="{{ p.repo_link }}" target="_blank" rel="noopener">Code</a>
+          {% endif %}
+          {% if p.pdf_link != "" %}
+            <a class="btn ghost" href="{{ p.pdf_link }}" target="_blank" rel="noopener">PDF</a>
+          {% endif %}
+        </div>
+      </article>
+    {% endfor %}
+  </section>
 {% endblock %}

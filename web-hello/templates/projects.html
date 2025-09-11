@@ -4,130 +4,51 @@
   <meta charset="utf-8" />
   <title>Projets — {{ name }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Ton CSS global -->
-  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
   <header>
-    <nav class="navbar container">
+    <nav class="navbar container" aria-label="Navigation principale">
       <div class="brand">{{ name }}</div>
       <a href="/">Accueil</a>
       <a href="/projects" aria-current="page">Projets</a>
-      <a class="btn ghost" href="/api/projects">API</a>
+      <a class="btn ghost" href="/api/projects" rel="nofollow">API</a>
     </nav>
   </header>
 
   <main class="container">
-    <section class="hero">
+    <section class="hero projects-hero">
       <h1>Projets</h1>
       <p class="subtitle">{{ title }} · {{ tagline }}</p>
 
-      <!-- Barre de filtres -->
-      <form id="filters" class="stack-12" role="search" style="display:grid; grid-template-columns:1fr 1fr 1fr auto auto; gap:8px; align-items:center;">
-        <input type="search" name="q" placeholder="Recherche (titre, description)" />
-        <input type="text"   name="category" placeholder="Catégorie (ex: web, data…)" />
-        <input type="text"   name="tech" placeholder="Tech (ex: rust, react…)" />
-        <select name="limit">
+      <form id="filters" class="projects-filters" role="search" aria-label="Filtres projets">
+        <label class="hidden" for="q">Recherche</label>
+        <input id="q" type="search" name="q" placeholder="Recherche (titre, description)" autocomplete="off">
+
+        <label class="hidden" for="category">Catégorie</label>
+        <input id="category" type="text" name="category" placeholder="Catégorie (ex: web, data…)" autocomplete="off">
+
+        <label class="hidden" for="tech">Technologie</label>
+        <input id="tech" type="text" name="tech" placeholder="Tech (ex: rust, react…)" autocomplete="off">
+
+        <label class="hidden" for="limit">Limite</label>
+        <select id="limit" name="limit">
           <option value="">Limite</option>
           <option>3</option><option>6</option><option>9</option><option>12</option>
         </select>
+
         <button type="submit" class="btn">Filtrer</button>
         <button type="button" id="reset" class="btn ghost">Réinitialiser</button>
       </form>
     </section>
 
-    <!-- Grille des projets -->
-    <section class="grid" id="grid" aria-live="polite">
-      <!-- rempli dynamiquement -->
-    </section>
+    <section id="grid" class="projects-grid" aria-live="polite" aria-busy="false"></section>
   </main>
 
   <footer class="container">
     © {{ year }} — {{ name }}
   </footer>
 
-  <script>
-    // Helpers
-    const $ = (s)=>document.querySelector(s);
-    const paramsFromForm = (formSel)=>{
-      const fd = new FormData($(formSel));
-      const p = new URLSearchParams();
-      for (const [k,v] of fd.entries()) if (v) p.set(k,v);
-      return p;
-    };
-
-    // Hydrate les champs depuis l'URL
-    (function syncForm(){
-      const p = new URLSearchParams(location.search);
-      const f = $('#filters');
-      for (const [k,v] of p.entries()){
-        const el = f.elements.namedItem(k);
-        if (el) el.value = v;
-      }
-    })();
-
-    async function loadProjects(){
-      const qs = location.search;
-      const url = '/api/projects' + (qs || '');
-      const grid = $('#grid');
-      grid.innerHTML = '<div class="card col-12"><p class="max-w-prose">Chargement…</p></div>';
-
-      try{
-        const res = await fetch(url);
-        if(!res.ok) throw new Error('HTTP '+res.status);
-        const items = await res.json();
-
-        if (!Array.isArray(items) || items.length === 0){
-          grid.innerHTML = '<div class="card col-12"><p class="max-w-prose">Aucun projet trouvé avec ces filtres.</p></div>';
-          return;
-        }
-
-        grid.innerHTML = '';
-        for (const p of items){
-          const hasImg = typeof p.image === 'string' && p.image.length > 0;
-          const hasRepo = typeof p.repoLink === 'string' && p.repoLink.length > 0;
-          const hasPdf  = typeof p.pdfLink  === 'string' && p.pdfLink.length  > 0;
-
-          const article = document.createElement('article');
-          article.className = 'card col-12 col-6 col-4';
-
-          article.innerHTML = `
-            ${hasImg ? `<img src="${p.image}" alt="${p.title}" style="width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:12px;">` : ``}
-            <h3>${p.title}</h3>
-            <p class="stack-8">${p.category ? `<span class="tag">${p.category}</span>` : ``}</p>
-            <p class="max-w-prose">${p.description ?? ''}</p>
-            ${
-              Array.isArray(p.technologies) && p.technologies.length
-              ? `<div class="tags" style="margin-top:10px;">${p.technologies.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`
-              : ``
-            }
-            <div class="stack-12" style="margin-top:12px;">
-              ${hasRepo ? `<a class="btn" href="${p.repoLink}" target="_blank" rel="noopener">Code</a>` : ``}
-              ${hasPdf  ? `<a class="btn ghost" href="${p.pdfLink}" target="_blank" rel="noopener">PDF</a>` : ``}
-            </div>
-          `;
-          grid.appendChild(article);
-        }
-      }catch(err){
-        grid.innerHTML = `<div class="card col-12"><p class="max-w-prose">Erreur de chargement : ${String(err).replace(/</g,'&lt;')}</p></div>`;
-      }
-    }
-
-    // Submit + reset
-    $('#filters').addEventListener('submit', (e)=>{
-      e.preventDefault();
-      const p = paramsFromForm('#filters');
-      const next = location.pathname + (p.toString() ? ('?'+p.toString()) : '');
-      history.replaceState(null,'',next);
-      loadProjects();
-    });
-    $('#reset').addEventListener('click', ()=>{
-      history.replaceState(null,'',location.pathname);
-      $('#filters').reset();
-      loadProjects();
-    });
-
-    loadProjects();
-  </script>
+  <script src="/assets/js/projects.js" defer></script>
 </body>
 </html>

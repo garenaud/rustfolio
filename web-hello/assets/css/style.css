@@ -1,191 +1,303 @@
-:root {
-  --bg: #ffffff;
-  --surface: #f7f7f8;
-  --text: #111418;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --accent: #2563eb;
-  --accent-600: #1d4ed8;
-  --accent-50: #eff6ff;
-  --radius: 14px;
-  --shadow: 0 8px 24px rgba(16,24,40,0.08);
-}
+/* =========================================================
+   Global theme (light + dark), layout, components
+   ========================================================= */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0e14;
-    --surface: #111827;
-    --text: #e5e7eb;
-    --muted: #9ca3af;
-    --border: #1f2937;
-    --accent: #60a5fa;
-    --accent-600: #3b82f6;
-    --accent-50: #0b1220;
-    --shadow: 0 10px 30px rgba(0,0,0,0.35);
+   :root {
+    --bg: #ffffff;
+    --surface: #f7f7f8;
+    --text: #111418;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #2563eb;
+    --accent-600: #1d4ed8;
+    --accent-50: #eff6ff;
+    --radius: 14px;
+    --shadow: 0 8px 24px rgba(16,24,40,0.08);
   }
-}
-
-* { box-sizing: border-box; }
-html, body { height: 100%; }
-body {
-  margin: 10px;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
-  color: var(--text);
-  background: radial-gradient(1200px 600px at 70% -10%, var(--accent-50), transparent 50%) var(--bg);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.container {
-  width: 100%;
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 24px;
-}
-header {
-  position: sticky;
-  top: 0;
-  backdrop-filter: saturate(180%) blur(10px);
-  background: color-mix(in oklab, var(--bg) 85%, transparent);
-  border-bottom: 1px solid var(--border);
-  z-index: 10;
-}
-.navbar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 24px;
-}
-.navbar .brand {
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  font-size: 18px;
-}
-.navbar a {
-  color: var(--muted);
-  text-decoration: none;
-  padding: 8px 10px;
-  border-radius: 10px;
-  transition: color .15s ease, background-color .15s ease;
-}
-.navbar a:hover {
-  color: var(--text);
-  background: var(--surface);
-}
-
-.hero {
-  padding: 48px 0 28px;
-}
-.hero h1 {
-  font-size: clamp(28px, 4vw, 42px);
-  line-height: 1.1;
-  margin: 0 0 8px;
-  letter-spacing: -0.02em;
-}
-.hero .subtitle {
-  font-size: clamp(16px, 2.2vw, 18px);
-  color: var(--muted);
-  margin: 0 0 18px;
-}
-.badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-/* Cards */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 16px;
-}
-.card {
-  grid-column: span 12;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px;
-  box-shadow: var(--shadow);
-  transition: transform .2s ease, border-color .2s ease;
-}
-.card:hover { transform: translateY(-2px); border-color: color-mix(in oklab, var(--accent), var(--border)); }
-.card h3 { margin: 0 0 8px; font-size: 18px; }
-.card p { margin: 0; color: var(--muted); }
-
-/* Responsive columns for cards */
-@media (min-width: 640px) {
-  .col-6 { grid-column: span 6; }
-}
-@media (min-width: 960px) {
-  .col-4 { grid-column: span 4; }
-}
-
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: var(--accent);
-  color: white;
-  border: 0;
-  border-radius: 12px;
-  text-decoration: none;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform .06s ease, background-color .2s ease, box-shadow .2s ease;
-  box-shadow: 0 6px 14px color-mix(in oklab, var(--accent) 40%, transparent);
-}
-.btn:hover { background: var(--accent-600); transform: translateY(-1px); }
-.btn.ghost {
-  background: transparent;
-  color: var(--accent-600);
-  border: 1px solid color-mix(in oklab, var(--accent), var(--border));
-  box-shadow: none;
-}
-.btn.ghost:hover {
-  background: color-mix(in oklab, var(--accent-50), transparent);
-}
-
-/* Lists for skills/projects */
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.tag {
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  color: var(--muted);
-  background: var(--surface);
-  border: 1px solid var(--border);
-}
-
-/* Footer */
-footer {
-  border-top: 1px solid var(--border);
-  margin-top: 40px;
-  padding: 24px 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-/* Utility */
-.center { display: grid; place-items: center; }
-.stack-8 > * { margin-block: 8px; }
-.stack-12 > * { margin-block: 12px; }
-.stack-16 > * { margin-block: 16px; }
-.max-w-prose { max-width: 70ch; }
-.hidden { display: none !important; }
+  
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0e14;
+      --surface: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #1f2937;
+      --accent: #60a5fa;
+      --accent-600: #3b82f6;
+      --accent-50: #0b1220;
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+  }
+  
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans";
+    color: var(--text);
+    background: radial-gradient(1200px 600px at 70% -10%, var(--accent-50), transparent 50%) var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Containers */
+  .container {
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  
+  /* Header / Navbar */
+  header {
+    position: sticky;
+    top: 0;
+    backdrop-filter: saturate(180%) blur(10px);
+    background: color-mix(in oklab, var(--bg) 85%, transparent);
+    border-bottom: 1px solid var(--border);
+    z-index: 10;
+  }
+  .navbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 24px;
+  }
+  .navbar .brand {
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    font-size: 18px;
+  }
+  .navbar a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 8px 10px;
+    border-radius: 10px;
+    transition: color .15s ease, background-color .15s ease;
+  }
+  .navbar a:hover {
+    color: var(--text);
+    background: var(--surface);
+  }
+  
+  /* Hero (accueil et pages) */
+  .hero {
+    padding: 48px 0 28px;
+  }
+  .hero h1 {
+    font-size: clamp(28px, 4vw, 42px);
+    line-height: 1.1;
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+  }
+  .hero .subtitle {
+    font-size: clamp(16px, 2.2vw, 18px);
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  
+  /* Grid & Cards */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+  }
+  .card {
+    grid-column: span 12;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+  .card:hover { 
+    transform: translateY(-2px); 
+    border-color: color-mix(in oklab, var(--accent), var(--border));
+  }
+  .card h3 { margin: 0 0 8px; font-size: 18px; }
+  .card p  { margin: 0; color: var(--muted); }
+  
+  /* Responsive columns helpers */
+  @media (min-width: 640px) {
+    .col-6 { grid-column: span 6; }
+  }
+  @media (min-width: 960px) {
+    .col-4 { grid-column: span 4; }
+  }
+  
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--accent);
+    color: white;
+    border: 0;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .06s ease, background-color .2s ease, box-shadow .2s ease;
+    box-shadow: 0 6px 14px color-mix(in oklab, var(--accent) 40%, transparent);
+  }
+  .btn:hover { background: var(--accent-600); transform: translateY(-1px); }
+  .btn.ghost {
+    background: transparent;
+    color: var(--accent-600);
+    border: 1px solid color-mix(in oklab, var(--accent), var(--border));
+    box-shadow: none;
+  }
+  .btn.ghost:hover {
+    background: color-mix(in oklab, var(--accent-50), transparent);
+  }
+  
+  /* Lists / Tags */
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tag {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+    padding: 24px 0;
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+  }
+  
+  /* Utilities */
+  .center { display: grid; place-items: center; }
+  .stack-8  > * { margin-block: 8px; }
+  .stack-12 > * { margin-block: 12px; }
+  .stack-16 > * { margin-block: 16px; }
+  .max-w-prose { max-width: 70ch; }
+  .hidden { display: none !important; }
+  
+  /* =========================================================
+     Home page specifics (index)
+     ========================================================= */
+  
+  .home-intro {
+    display: grid;
+    gap: 16px;
+  }
+  @media (min-width: 900px) {
+    .home-intro {
+      grid-template-columns: 1.2fr 0.8fr;
+      align-items: start;
+    }
+  }
+  .home-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+  
+  /* “Featured” skill/project sections */
+  .section {
+    margin-top: 28px;
+  }
+  .section h2 {
+    font-size: 20px;
+    margin: 0 0 10px;
+  }
+  
+  /* =========================================================
+     Projects page specifics
+     ========================================================= */
+  
+  .projects-hero {
+    margin-bottom: 24px;
+  }
+  .projects-hero h1 {
+    font-size: clamp(24px, 4vw, 36px);
+    margin-bottom: 6px;
+  }
+  .projects-hero .subtitle {
+    font-size: 16px;
+    color: var(--muted);
+  }
+  
+  .projects-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto auto;
+    gap: 8px;
+    margin-top: 20px;
+    margin-bottom: 30px;
+  }
+  .projects-filters input,
+  .projects-filters select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+  }
+  .projects-filters button { white-space: nowrap; }
+  
+  .projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  
+  .project-card { overflow: hidden; }
+  .project-card img {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+  }
+  .project-card h3 {
+    font-size: 18px;
+    margin: 0 0 8px;
+  }
+  .project-card .meta {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .project-card .tags { margin-top: 8px; }
+  .project-card .actions {
+    margin-top: 14px;
+    display: flex;
+    gap: 10px;
+  }
+  
+  /* =========================================================
+     Print-friendly tweaks (optional)
+     ========================================================= */
+  @media print {
+    header, .projects-filters, .home-cta { display: none !important; }
+    .card { box-shadow: none; border-color: #ddd; }
+  }
+  
