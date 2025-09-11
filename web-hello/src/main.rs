@@ -1,18 +1,19 @@
 mod data;
 
 use axum::{
-    routing::{get, post},
-    extract::{Path, Query, State},
-    response::{IntoResponse, Response},
+    extract::{Query, State},
+    response::IntoResponse,
+    routing::get,
     Json, Router, serve,
 };
-use axum::http::StatusCode;
 use tokio::net::TcpListener;
-use std::{net::SocketAddr, collections::HashMap, fs, sync::Arc};
+use std::{fs, net::SocketAddr, sync::Arc};
 use askama::Template;
-use askama_axum::IntoResponse as _;
+use askama_axum::IntoResponse as _; // permet `tpl.into_response()`
 use tower_http::services::ServeDir;
 use chrono::Datelike;
+
+// ---------- Templates SSR ----------
 
 #[derive(Template)]
 #[template(path = "index.html")]
@@ -25,91 +26,140 @@ struct IndexTemplate<'a> {
     projects: &'a [data::Project],
 }
 
+#[derive(Template)]
+#[template(path = "projects.html")]
+struct ProjectsTpl<'a> {
+    year: i32,
+    name: &'a str,
+    title: &'a str,
+    tagline: &'a str,
+    projects: &'a [data::Project],
+}
+
+// ---------- State partagé ----------
+
+#[derive(Clone)]
+struct AppState {
+    _experiences: Arc<Vec<data::Experience>>, // underscore = pas encore utilisé ici
+    projects: Arc<Vec<data::Project>>,
+    skills: Arc<Vec<data::Skill>>,
+}
+
+// ---------- API: filtres projets ----------
+
+#[derive(serde::Deserialize, Debug)]
+struct ProjectFilter {
+    q: Option<String>,        // recherche dans title/description
+    category: Option<String>, // match exact insensible à la casse
+    tech: Option<String>,     // match exact sur une techno
+    limit: Option<usize>,     // couper la liste
+}
+
+// ---------- Handlers ----------
+
 async fn home(State(st): State<AppState>) -> impl IntoResponse {
     let tpl = IndexTemplate {
         year: chrono::Utc::now().year(),
         name: "Gaëtan Renaud",
         title: "Développeur Rust",
         tagline: "Rust • Web • Cloud",
-        skills: &st.skills[..std::cmp::min(5, st.skills.len())],
-        projects: &st.projects[..std::cmp::min(3, st.projects.len())],
+        skills: &st.skills[..st.skills.len().min(5)],
+        projects: &st.projects[..st.projects.len().min(3)],
     };
     tpl.into_response()
 }
 
-#[derive(Clone)]
-struct AppState {
-    experiences: Arc<Vec<data::Experience>>,
-    projects: Arc<Vec<data::Project>>,
-    skills: Arc<Vec<data::Skill>>,
+async fn projects_page(State(st): State<AppState>) -> impl IntoResponse {
+    ProjectsTpl {
+        year: chrono::Utc::now().year(),
+        name: "Gaëtan Renaud",
+        title: "Développeur Rust",
+        tagline: "Rust • Web • Cloud",
+        projects: &st.projects,
+    }
+    .into_response() // matérialise une Response avant que `st` soit droppé (évite E0515)
 }
 
-#[derive(serde::Deserialize)]
-struct RegisterInput { name: String, age: u8 }
-
 #[derive(serde::Serialize)]
-struct RegisterOk { id: u64, name: String, age: u8 }
-
-#[derive(serde::Serialize)]
-struct ErrorMsg { error: String }
-
-#[derive(serde::Serialize, serde::Deserialize)]
-struct Info { status: &'static str, app: &'static str, version: &'static str }
-
-#[derive(serde::Serialize, serde::Deserialize)]
-struct Person { name: String, age: u8 }
-
-async fn echo(Json(payload): Json<Person>) -> Json<Person> { Json(payload) }
+struct Info {
+    status: &'static str,
+    app: &'static str,
+    version: &'static str,
+}
 
 async fn info_handler() -> Json<Info> {
-    Json(Info { status: "ok", app: "web-hello", version: env!("CARGO_PKG_VERSION") })
+    Json(Info {
+        status: "ok",
+        app: "web-hello",
+        version: env!("CARGO_PKG_VERSION"),
+    })
 }
 
-async fn register(Json(payload): Json<RegisterInput>) -> Response {
-    if payload.name.trim().is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(ErrorMsg { error: "name is required".into() })).into_response();
+async fn health() -> &'static str {
+    "OK"
+}
+
+async fn api_projects(
+    State(st): State<AppState>,
+    Query(f): Query<ProjectFilter>,
+) -> Json<Vec<data::Project>> {
+    // nécessite `#[derive(Clone)]` sur data::Project (déjà ajouté côté data.rs)
+    let mut out: Vec<data::Project> = st.projects.iter().cloned().collect();
+    let norm = |s: &str| s.to_lowercase();
+
+    if let Some(q) = &f.q {
+        let qn = norm(q);
+        out.retain(|p| norm(&p.title).contains(&qn) || norm(&p.description).contains(&qn));
     }
-    if payload.age == 0 {
-        return (StatusCode::BAD_REQUEST, Json(ErrorMsg { error: "age must be > 0".into() })).into_response();
+    if let Some(cat) = &f.category {
+        let cn = norm(cat);
+        out.retain(|p| norm(&p.category) == cn);
     }
-    let created = RegisterOk { id: 1, name: payload.name, age: payload.age };
-    (StatusCode::CREATED, Json(created)).into_response()
+    if let Some(tech) = &f.tech {
+        let tn = norm(tech);
+        out.retain(|p| p.technologies.iter().any(|t| norm(t) == tn));
+    }
+    if let Some(max) = f.limit {
+        out.truncate(max);
+    }
+
+    Json(out)
 }
 
-async fn greet(Query(params): Query<HashMap<String, String>>) -> String {
-    if let Some(name) = params.get("name") { format!("Hello, {}!", name) } else { "Hello, stranger!".to_string() }
-}
-
-async fn hello_name(Path(name): Path<String>) -> String { format!("Hello, {}! 🚀 ca fonctionne", name) }
-async fn hello() -> &'static str { "Hello, Rust! 🚀 ca fonctionne" }
-async fn health() -> &'static str { "OK c'est bon" }
+// ---------- bootstrap ----------
 
 #[tokio::main]
 async fn main() {
-    let exp: Vec<data::Experience> =
-        serde_json::from_str(&fs::read_to_string("data/experience_fr.json").expect("read exp"))
-        .expect("parse exp");
-    let projects: Vec<data::Project> =
-        serde_json::from_str(&fs::read_to_string("data/projects.json").expect("read projects"))
-        .expect("parse projects");
+    // charge les JSON (chemins relatifs au crate)
+    let exp: Vec<data::Experience> = serde_json::from_str(
+        &fs::read_to_string("data/experience_fr.json").expect("read exp"),
+    )
+    .expect("parse exp");
+
+    let projects: Vec<data::Project> = serde_json::from_str(
+        &fs::read_to_string("data/projects.json").expect("read projects"),
+    )
+    .expect("parse projects");
+
     let skills: Vec<data::Skill> =
         serde_json::from_str(&fs::read_to_string("data/skills.json").expect("read skills"))
-        .expect("parse skills");
+            .expect("parse skills");
 
     let state = AppState {
-        experiences: Arc::new(exp),
+        _experiences: Arc::new(exp),
         projects: Arc::new(projects),
         skills: Arc::new(skills),
     };
 
     let app = Router::new()
+        // pages SSR
         .route("/", get(home))
-        .route("/health", get(health))
+        .route("/projects", get(projects_page))
+        // API
         .route("/api/info", get(info_handler))
-        .route("/hello/:name", get(hello_name))
-        .route("/greet", get(greet))
-        .route("/api/echo", post(echo))
-        .route("/api/register", post(register))
+        .route("/api/projects", get(api_projects))
+        // santé & statiques
+        .route("/health", get(health))
         .nest_service("/assets", ServeDir::new("assets"))
         .with_state(state);
 

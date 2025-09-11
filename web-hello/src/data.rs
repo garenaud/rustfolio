@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
 pub struct Experience {
@@ -10,15 +10,17 @@ pub struct Experience {
     pub tasks: Vec<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Project {
     pub title: String,
     pub description: String,
     pub category: String,
     pub technologies: Vec<String>,
-    pub repoLink: String,
-    pub pdfLink: String,
-    pub image: String,
+    #[serde(rename = "repoLink")]
+    pub repo_link: String,
+    #[serde(rename = "pdfLink")]
+    pub pdf_link: String,
+    pub image: String, // ex: "/assets/img/projet.png"
 }
 
 #[derive(Deserialize, Debug)]
