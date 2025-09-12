@@ -17,6 +17,11 @@
       <a href="/projects" {% block nav_projects_active %}{% endblock %}>Projets</a>
       <a class="btn ghost" href="/api/projects">API</a>
       <a href="/portfolio">Portfolio</a>
+      <a href="/auth/login">Login</a>
+      <a href="/auth/signup">Signup</a>
+      <form method="post" action="/auth/logout" style="display:inline">
+        <button type="submit">Logout</button>
+      </form>
       {% block nav_extra %}{% endblock %}
     </nav>
   </header>
