@@ -14,8 +14,10 @@ services:
       - "8080:8080"
     environment:
       - RUST_LOG=info
+      - DATABASE_URL=sqlite:///app/data/app.db
     volumes:
       - ./:/app
+      - app-data:/app/data
       - cargo-registry:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
       - target-cache:/app/web-hello/target
@@ -26,3 +28,4 @@ volumes:
   cargo-registry:
   cargo-git:
   target-cache:
+  app-data:
