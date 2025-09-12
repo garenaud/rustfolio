@@ -19,6 +19,7 @@ use crate::routes::{pages, api, health, auth};
 
 #[tokio::main]
 async fn main() {
+    dotenvy::dotenv().ok();
     let db = SqlitePool::connect(&std::env::var("DATABASE_URL").expect("DATABASE_URL"))
         .await
         .expect("connect db");

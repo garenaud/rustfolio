@@ -4,25 +4,35 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     working_dir: /app/web-hello
-    command: ["/usr/local/cargo/bin/cargo", "watch",
-              "--poll",
-              "-w", "src",
-              "-w", "Cargo.toml",
-              "--why",
-              "-x", "run"]
-    ports:
-      - "8080:8080"
+
+    command:
+      ["/usr/local/cargo/bin/cargo", "watch",
+       "--poll",
+       "-w", "src",
+       "-w", "Cargo.toml",
+       "--why",
+       "-x", "run"]
+
+    env_file:
+      - .env
+
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=sqlite:///app/data/app.db
+      - SQLX_OFFLINE=false
+
+    ports:
+      - "8080:8080"
+
     volumes:
-      - ./:/app
+      - ./:/app:cached
       - app-data:/app/data
       - cargo-registry:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
       - target-cache:/app/web-hello/target
-    stdin_open: true
+
     tty: true
+    stdin_open: true
+    restart: unless-stopped
 
 volumes:
   cargo-registry:
