@@ -1,34 +1,31 @@
 use axum::{
-    body::Body,
-    http::{Request, StatusCode},
-    extract::State,
+    extract::{FromRequestParts, State},
+    http::Request,
     middleware::Next,
-    response::Response,
+    response::{IntoResponse, Redirect, Response},
 };
-use axum_extra::extract::cookie::CookieJar;
+
+use crate::routes::auth::AuthUser;
 use crate::state::AppState;
-use sqlx::Row;
 
-pub async fn require_auth<B>(
-    State(app): axum::extract::State<AppState>,
-    mut req: Request<B>,
-    next: Next<B>,
-) -> Result<Response, (StatusCode, String)> {
-    let jar = CookieJar::from_headers(req.headers());
-    let Some(sid) = jar.get("sid").map(|c| c.value().to_string()) else {
-        return Err((StatusCode::UNAUTHORIZED, "Non connecté".into()));
-    };
+/// Middleware qui exige une session.
+/// - Si ok: on met `AuthUser` dans `req.extensions()` puis on continue.
+/// - Sinon: on redirige vers /auth/login.
+pub async fn require_auth(
+    State(st): State<AppState>,
+    mut req: Request<axum::body::Body>,   // 👈 préciser le body
+    next: Next,
+) -> Result<Response, Response> {
+    // On découpe la requête pour appeler l'extracteur
+    let (mut parts, body) = req.into_parts();
 
-    let ok = sqlx::query("SELECT 1 FROM sessions WHERE id = ? AND expires_at > CURRENT_TIMESTAMP")
-        .bind(&sid)
-        .fetch_optional(&app.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?
-        .is_some();
-
-    if !ok {
-        return Err((StatusCode::UNAUTHORIZED, "Session expirée".into()));
+    match AuthUser::from_request_parts(&mut parts, &st).await {
+        Ok(user) => {
+            // Reconstruire la requête et insérer l'utilisateur
+            let mut req = Request::from_parts(parts, body);
+            req.extensions_mut().insert(user); // 👉 nécessite #[derive(Clone)] sur AuthUser
+            Ok(next.run(req).await)
+        }
+        Err(_) => Err(Redirect::to("/auth/login").into_response()),
     }
-
-    Ok(next.run(req).await)
 }

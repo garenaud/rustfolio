@@ -368,7 +368,7 @@ async fn me(State(st): State<AppState>, user: AuthUser) -> Result<Json<Me>, (Sta
 // ============================
 // Extracteur d'utilisateur
 // ============================
-
+#[derive(Clone)]
 pub struct AuthUser { pub id: String }
 
 #[axum::async_trait]
