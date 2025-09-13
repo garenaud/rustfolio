@@ -1,0 +1,39 @@
+{% raw %}{% extends "base.html" %}
+
+{% block title %}Créer un compte • Rustfolio{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1 class="hero__title">Créer un compte</h1>
+  <p class="hero__subtitle">Rejoins Rustfolio et construis ton CV.</p>
+</section>
+
+<div class="grid">
+  <div class="col-12 card">
+    {% if error %}<div class="alert alert--danger">{{ error }}</div>{% endif %}
+
+    <form class="form" method="post" action="/auth/signup">
+      <div class="form__row">
+        <label class="label" for="display_name">Nom affiché</label>
+        <input class="input" id="display_name" name="display_name" type="text" autocomplete="name">
+      </div>
+
+      <div class="form__row">
+        <label class="label" for="email">Email</label>
+        <input class="input" id="email" name="email" type="email" required autocomplete="email">
+      </div>
+
+      <div class="form__row">
+        <label class="label" for="password">Mot de passe</label>
+        <input class="input" id="password" name="password" type="password" required autocomplete="new-password">
+        <div class="help">8+ caractères, idéalement une passphrase.</div>
+      </div>
+
+      <div class="form__actions">
+        <a class="btn btn--ghost" href="/auth/login">Déjà inscrit ?</a>
+        <button class="btn" type="submit">Créer mon compte</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}{% endraw %}

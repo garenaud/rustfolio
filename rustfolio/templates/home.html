@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Engagez-moi.com — Crée, modifie et publie ton CV{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="home-intro">
+    <div class="stack-12">
+      <h1 class="hero__title">Crée ton CV. Modifie-le librement. Publie-le ici.</h1>
+      <p class="hero__subtitle max-w-prose">
+        Engagez-moi.com te permet de construire un CV moderne, de le mettre à jour en quelques clics,
+        puis de l’héberger pour qu’il soit facilement découvrable par les recruteurs.
+        À la base, ce projet est surtout un terrain d’apprentissage et une pièce maîtresse
+        de mon portfolio personnel : j’y explore Rust, le web moderne et le design, tout en
+        offrant un outil utile et élégant pour partager ton profil.
+      </p>
+
+      <div class="home-cta">
+        <a class="btn" href="/auth/signup">Créer un compte</a>
+        <a class="btn btn--ghost" href="/auth/login">Se connecter</a>
+      </div>
+
+      <div class="badges">
+        <span class="badge">⚙️ Rust • Axum • SQLx</span>
+        <span class="badge">🎨 Askama • CSS custom</span>
+        <span class="badge">🧩 SPA Dashboard (WIP)</span>
+      </div>
+    </div>
+
+    <div class="center">
+      <img src="/assets/img/hero-cv.png" alt="Illustration de CV et builder"
+           style="max-width:520px;width:100%;border-radius:var(--radius);
+                  border:1px solid var(--border);box-shadow:var(--shadow);" />
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section__title">Comment ça marche&nbsp;?</h2>
+  <div class="grid">
+    <div class="card col-12 col-6 col-4">
+      <h3>1. Crée ton compte</h3>
+      <p>Inscris-toi et sécurise ton accès. Tu pourras revenir modifier ton CV quand tu veux.</p>
+    </div>
+    <div class="card col-12 col-6 col-4">
+      <h3>2. Renseigne tes infos</h3>
+      <p>Profil, expériences, projets, compétences… ou importe un JSON existant.</p>
+    </div>
+    <div class="card col-12 col-6 col-4">
+      <h3>3. Construit & publie</h3>
+      <p>Utilise le builder (bientôt) pour agencer tes blocs et publier une page statique.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section__title">Pourquoi ici&nbsp;?</h2>
+  <div class="grid">
+    <div class="card col-12 col-6">
+      <h3>Un projet d’apprentissage assumé</h3>
+      <p>Le but est aussi de progresser en Rust et d’embellir mon propre portfolio — en gardant une
+         qualité produit réelle pour toi.</p>
+    </div>
+    <div class="card col-12 col-6">
+      <h3>Simple, clair, extensible</h3>
+      <p>Un design léger, des données portables (JSON), et un futur builder façon “sections & widgets”.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

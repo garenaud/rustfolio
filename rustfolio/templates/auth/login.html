@@ -1,0 +1,33 @@
+{% raw %}{% extends "base.html" %}
+
+{% block title %}Connexion • Rustfolio{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1 class="hero__title">Connexion</h1>
+  <p class="hero__subtitle">Accède à ton tableau de bord.</p>
+</section>
+
+<div class="grid">
+  <div class="col-12 card">
+    {% if error %}<div class="alert alert--danger">{{ error }}</div>{% endif %}
+
+    <form class="form" method="post" action="/auth/login">
+      <div class="form__row">
+        <label class="label" for="email">Email</label>
+        <input class="input" id="email" name="email" type="email" required autocomplete="email">
+      </div>
+
+      <div class="form__row">
+        <label class="label" for="password">Mot de passe</label>
+        <input class="input" id="password" name="password" type="password" required autocomplete="current-password">
+      </div>
+
+      <div class="form__actions">
+        <a class="btn btn--ghost" href="/auth/signup">Créer un compte</a>
+        <button class="btn" type="submit">Se connecter</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}{% endraw %}
