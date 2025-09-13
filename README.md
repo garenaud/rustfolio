@@ -4,7 +4,7 @@ Ce repo contient mes exercices et projets d'apprentissage Rust, en commençant p
 
 ## Projets inclus
 - **hello-rs** : apprentissage des bases Rust (variables, fonctions, tests, CLI, Result)
-- **web-hello** : serveur web avec Axum (routes, JSON, POST, templates Askama, statiques)
+- **rustfolio** : serveur web avec Axum (routes, JSON, POST, templates Askama, statiques)
 
 ---
 
@@ -47,7 +47,7 @@ cargo run -- Bob
 
 ---
 
-## Projet 2 : web-hello (Axum)
+## Projet 2 : rustfolio (Axum)
 
 Objectifs :
 - Découverte d’Axum + Tokio
@@ -90,7 +90,7 @@ curl "http://localhost:8080/greet?name=Bob"
 
 # Retour JSON
 curl http://localhost:8080/api/info
-# {"status":"ok","app":"web-hello","version":"0.1.0"}
+# {"status":"ok","app":"rustfolio","version":"0.1.0"}
 
 # POST JSON (echo)
 curl -X POST http://localhost:8080/api/echo -H "Content-Type: application/json" -d '{"name":"Alice","age":30}'
@@ -113,7 +113,7 @@ curl -i -X POST http://localhost:8080/api/register -H "Content-Type: application
 - [x] Hello World CLI (`hello-rs`)
 - [x] Variables / mutabilité / tests unitaires
 - [x] Arguments CLI + gestion d’erreurs (`Result`)
-- [x] Premier serveur Axum (`web-hello`)
+- [x] Premier serveur Axum (`rustfolio`)
 - [x] Route `/health`
 - [x] Retourner du JSON (`/api/info`)
 - [x] Path params et Query params

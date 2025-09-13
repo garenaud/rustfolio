@@ -1,19 +1,19 @@
 FROM rust:latest
 
-# SQLx Tools
 RUN apt-get update \
- && apt-get install -y --no-install-recommends pkg-config libssl-dev ca-certificates libsqlite3-dev \
+ && apt-get install -y --no-install-recommends \
+      pkg-config libssl-dev ca-certificates libsqlite3-dev sqlite3 \
  && rm -rf /var/lib/apt/lists/*
 
 # Hot reload
 RUN cargo install cargo-watch
 
-# SQLx CLI (avec SQLite)
+# SQLx CLI
 RUN cargo install sqlx-cli --no-default-features --features sqlite,rustls
 
 WORKDIR /app
 
-# Entrypoint qui applique les migrations puis lance la commande (cargo watch)
+# Entrypoint (migrations + commande)
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
  && sed -i '1s/^\xEF\xBB\xBF//' /usr/local/bin/docker-entrypoint.sh \

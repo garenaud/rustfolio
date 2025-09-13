@@ -9,7 +9,7 @@ pub struct Info {
 }
 
 pub async fn info_handler() -> Json<Info> {
-    Json(Info { status: "ok", app: "web-hello", version: env!("CARGO_PKG_VERSION") })
+    Json(Info { status: "ok", app: "rustfolio", version: env!("CARGO_PKG_VERSION") })
 }
 
 #[derive(serde::Deserialize, Debug)]
