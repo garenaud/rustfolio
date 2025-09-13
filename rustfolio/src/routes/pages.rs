@@ -1,41 +1,47 @@
-use axum::{extract::State, http::StatusCode, response::Html};
+// src/routes/pages.rs
+use askama::Template;              // <- pour avoir .render()
+use askama_axum::IntoResponse;     // <- pour home() si tu retournes un Template
 use chrono::Datelike;
-use crate::{state::AppState, templates::{IndexTemplate, ProjectsTpl, PortfolioTpl}};
-use askama::Template;
 
-pub async fn home(State(st): State<AppState>) -> Result<Html<String>, (StatusCode, String)> {
-    let tpl = IndexTemplate {
+use crate::templates::{HomeTpl, ProjectsTpl, PortfolioTpl};
+use crate::state::AppState;
+
+// Pas d'emprunt -> on peut retourner directement le Template
+pub async fn home() -> axum::response::Html<String> {
+    let html = HomeTpl { year: chrono::Utc::now().year() }
+        .render()
+        .expect("render home.html");
+    axum::response::Html(html)
+}
+
+// Emprunts -> on rend en String puis Html<String>
+pub async fn projects_page(
+    axum::extract::State(st): axum::extract::State<AppState>,
+) -> axum::response::Html<String> {
+    let html = ProjectsTpl {
         year: chrono::Utc::now().year(),
         name: "Gaëtan Renaud",
         title: "Développeur Rust",
         tagline: "Rust • Web • Cloud",
-        skills: &st.skills[..st.skills.len().min(5)],
-        projects: &st.projects[..st.projects.len().min(3)],
-    };
-    tpl.render().map(Html).map_err(e500)
+        projects: &st.projects, // <- emprunt
+    }
+    .render()
+    .expect("Askama render projects.html");
+
+    axum::response::Html(html)
 }
 
-pub async fn projects_page(State(st): State<AppState>) -> Result<Html<String>, (StatusCode, String)> {
-    let tpl = ProjectsTpl {
+pub async fn portfolio_page(
+    axum::extract::State(_st): axum::extract::State<AppState>,
+) -> axum::response::Html<String> {
+    let html = PortfolioTpl {
         year: chrono::Utc::now().year(),
         name: "Gaëtan Renaud",
         title: "Développeur Rust",
         tagline: "Rust • Web • Cloud",
-        projects: &st.projects,
-    };
-    tpl.render().map(Html).map_err(e500)
-}
+    }
+    .render()
+    .expect("Askama render portfolio.html");
 
-pub async fn portfolio_page(State(_st): State<AppState>) -> Result<Html<String>, (StatusCode, String)> {
-    let tpl = PortfolioTpl {
-        year: chrono::Utc::now().year(),
-        name: "Gaëtan Renaud",
-        title: "Développeur Rust",
-        tagline: "Rust • Web • Cloud",
-    };
-    tpl.render().map(Html).map_err(e500)
-}
-
-fn e500<E: std::fmt::Display>(e: E) -> (StatusCode, String) {
-    (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    axum::response::Html(html)
 }

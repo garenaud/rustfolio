@@ -7,6 +7,7 @@ mod routes {
     pub mod api;
     pub mod health;
     pub mod auth;
+    pub mod profile;
 }
 
 use std::{net::SocketAddr, sync::Arc};
@@ -22,12 +23,13 @@ use tokio::net::TcpListener;
 use tower_http::services::{ServeDir, ServeFile};
 
 use crate::middleware::require_auth;
-use crate::routes::{api, auth, health, pages};
+use crate::routes::{api, auth, health, pages, profile};
 use crate::state::AppState;
 
 #[tokio::main]
 async fn main() {
-    // Charge les variables du .env si présent (dev)
+
+    // Charge les variables du .env (dev)
     dotenvy::dotenv().ok();
 
     // --- DB ---
@@ -35,7 +37,7 @@ async fn main() {
         .await
         .expect("failed to connect DB");
 
-    // --- Données statiques (JSON) ---
+    // --- Données JSON statiques pour tes pages SSR ---
     let exp: Vec<data::Experience> = serde_json::from_str(
         &std::fs::read_to_string("data/experience_fr.json").expect("read experience_fr.json"),
     )
@@ -60,8 +62,7 @@ async fn main() {
     };
 
     // --- SPA tableau de bord protégée (/dashboard) ---
-    // Sert tous les fichiers de assets/dashboard et fait fallback sur index.html
-    // pour laisser le router côté client gérer /dashboard/*.
+    // Sert tous les fichiers du dossier et fallback sur index.html pour /dashboard/*.
     let dashboard_service = get_service(
         ServeDir::new("assets/dashboard")
             .fallback(ServeFile::new("assets/dashboard/index.html")),
@@ -73,7 +74,6 @@ async fn main() {
         )
     });
 
-    // Sous-arbre protégé par le middleware require_auth
     let dashboard_router = Router::new()
         .nest_service("/dashboard", dashboard_service)
         .route_layer(from_fn_with_state(state.clone(), require_auth));
@@ -91,17 +91,17 @@ async fn main() {
         .route("/health", get(health::health))
         .nest_service("/assets", ServeDir::new("assets"))
         .nest_service("/data", ServeDir::new("data"))
-        // Auth
+        // Auth & API profil
         .nest("/auth", auth::router())
+        .nest("/api", profile::router())
         // Dashboard (protégé)
         .merge(dashboard_router)
-        // State pour TOUT l'arbre
+        // State pour tout l’arbre
         .with_state(state);
 
-    // --- Serveur ---
+    // --- Serveur HTTP (pas HTTPS en dev) ---
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     println!("Listening on http://{}", addr);
-
     let listener = TcpListener::bind(addr).await.unwrap();
     serve(listener, app).await.unwrap();
 }

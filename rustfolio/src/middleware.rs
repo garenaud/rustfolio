@@ -13,7 +13,7 @@ use crate::state::AppState;
 /// - Sinon: on redirige vers /auth/login.
 pub async fn require_auth(
     State(st): State<AppState>,
-    mut req: Request<axum::body::Body>,   // 👈 préciser le body
+    req: Request<axum::body::Body>,   // 👈 préciser le body
     next: Next,
 ) -> Result<Response, Response> {
     // On découpe la requête pour appeler l'extracteur

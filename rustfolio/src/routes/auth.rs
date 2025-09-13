@@ -3,7 +3,7 @@ use axum::{
     http::{request::Parts, StatusCode},
     response::{IntoResponse, Redirect, Html},
     routing::{get, post},
-    Form, Json, Router,
+    Json, Form, Router,
 };
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use askama::Template;
@@ -44,9 +44,13 @@ struct SignupTpl<'a> {
     error: Option<&'a str>,
 }
 
-// ============================
-// Router
-// ============================
+
+// ===========================
+// GET /auth/session -> { authenticated: bool }
+// ===========================
+ 
+#[derive(serde::Serialize)]
+struct SessionState { authenticated: bool }
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -54,8 +58,35 @@ pub fn router() -> Router<AppState> {
         .route("/signup", get(signup_page).post(signup_post))
         .route("/logout", post(logout_post))
         .route("/verify", get(verify_email))
+        // utilisé par la navbar pour savoir si l’utilisateur est connecté
+        .route("/session", get(session))
         .route("/me",     get(me))
 }
+
+async fn session(
+    State(st): State<AppState>,
+    parts: axum::http::request::Parts,
+) -> Json<serde_json::Value> {
+    use axum_extra::extract::cookie::CookieJar;
+
+    let jar = CookieJar::from_headers(&parts.headers);
+    let res = if let Some(sid) = jar.get("sid").map(|c| c.value().to_string()) {
+        // valide ?
+        let ok = sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(1) FROM sessions WHERE id = ? AND expires_at > CURRENT_TIMESTAMP"
+            )
+            .bind(sid)
+            .fetch_one(&st.db).await
+            .unwrap_or(0) > 0;
+        ok
+    } else {
+        false
+    };
+    Json(serde_json::json!({ "authenticated": res }))
+}
+
+
+
 
 // ============================
 // Pages (GET)

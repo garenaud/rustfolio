@@ -1,17 +1,13 @@
 use askama::Template;
-use crate::data;
 
+// Accueil
 #[derive(Template)]
-#[template(path = "index.html")]
-pub struct IndexTemplate<'a> {
+#[template(path = "home.html")]
+pub struct HomeTpl {
     pub year: i32,
-    pub name: &'a str,
-    pub title: &'a str,
-    pub tagline: &'a str,
-    pub skills: &'a [data::Skill],
-    pub projects: &'a [data::Project],
 }
 
+// Laisse ProjectsTpl et PortfolioTpl ici si tu les utilises encore :
 #[derive(Template)]
 #[template(path = "projects.html")]
 pub struct ProjectsTpl<'a> {
@@ -19,7 +15,7 @@ pub struct ProjectsTpl<'a> {
     pub name: &'a str,
     pub title: &'a str,
     pub tagline: &'a str,
-    pub projects: &'a [data::Project],
+    pub projects: &'a [crate::data::Project],
 }
 
 #[derive(Template)]

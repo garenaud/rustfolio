@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; }
+    header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#111; color:#fff; }
+    header a, header button { color:#fff; text-decoration:none; margin-left:12px; }
+    .tabs { display:flex; gap:8px; padding:12px 16px; border-bottom:1px solid #ddd;}
+    .tabs button { padding:8px 12px; border:1px solid #ccc; background:#f7f7f7; cursor:pointer; }
+    .tabs button.active { background:#eaeaea; }
+    .page { display:none; padding:16px; }
+    .page.active { display:block; }
+    .row { margin-bottom:12px; }
+    label { display:block; font-weight:600; margin-bottom:6px; }
+    input, textarea { width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; }
+    .cols { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    .actions { margin-top:16px; display:flex; gap:8px; }
+    pre { background:#f5f5f5; padding:12px; overflow:auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>Dashboard</div>
+    <nav>
+      <a href="/">← Retour</a>
+      <form id="logout-form" action="/auth/logout" method="post" style="display:inline">
+        <button type="submit">Logout</button>
+      </form>
+    </nav>
+  </header>
+
+  <div class="tabs">
+    <button data-tab="account" class="active">Compte</button>
+    <button data-tab="profile">Profil CV</button>
+    <button data-tab="builder">Builder</button>
+  </div>
+
+  <!-- Compte -->
+  <section id="page-account" class="page active">
+    <h2>Options du compte</h2>
+    <div class="row">
+      <p><strong>Changer le mot de passe</strong> (à implémenter côté API)</p>
+      <div class="cols">
+        <div>
+          <label>Nouveau mot de passe</label>
+          <input type="password" id="pwd1" />
+        </div>
+        <div>
+          <label>Confirmer le mot de passe</label>
+          <input type="password" id="pwd2" />
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btn-change-pwd" disabled>Changer (bientôt)</button>
+        <a href="/auth/login">Mot de passe oublié ?</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Profil CV -->
+  <section id="page-profile" class="page">
+    <h2>Profil CV</h2>
+    <p>Remplis ce que tu veux — les champs vides n’apparaîtront pas.</p>
+
+    <div class="row cols">
+      <div>
+        <label>Nom complet</label>
+        <input id="full_name" />
+      </div>
+      <div>
+        <label>Titre</label>
+        <input id="title" />
+      </div>
+      <div>
+        <label>Tagline</label>
+        <input id="tagline" />
+      </div>
+      <div>
+        <label>Email</label>
+        <input id="email" />
+      </div>
+      <div>
+        <label>Téléphone</label>
+        <input id="phone" />
+      </div>
+      <div>
+        <label>Localisation</label>
+        <input id="location" />
+      </div>
+      <div>
+        <label>Site web</label>
+        <input id="website" />
+      </div>
+      <div>
+        <label>LinkedIn</label>
+        <input id="linkedin" />
+      </div>
+      <div>
+        <label>GitHub</label>
+        <input id="github" />
+      </div>
+    </div>
+
+    <div class="row">
+      <label>Résumé</label>
+      <textarea id="summary" rows="4"></textarea>
+    </div>
+
+    <div class="row">
+      <label>Compétences (séparées par des virgules)</label>
+      <input id="skills" placeholder="Rust, Axum, SQLx, Docker" />
+    </div>
+
+    <details class="row">
+      <summary><strong>Expériences</strong> (JSON)</summary>
+      <small>Exemple: [{"company":"X","role":"Y","bullets":["..."]}]</small>
+      <textarea id="experiences" rows="6"></textarea>
+    </details>
+
+    <details class="row">
+      <summary><strong>Éducation</strong> (JSON)</summary>
+      <textarea id="education" rows="6"></textarea>
+    </details>
+
+    <details class="row">
+      <summary><strong>Projets</strong> (JSON)</summary>
+      <textarea id="projects" rows="6"></textarea>
+    </details>
+
+    <div class="actions">
+      <button id="btn-save">Enregistrer</button>
+      <button id="btn-reload">Recharger</button>
+      <a id="btn-export" href="/api/profile/export">Exporter JSON</a>
+      <label style="margin-left:auto;">Importer JSON <input type="file" id="file-import" accept="application/json"></label>
+    </div>
+
+    <div id="save-status"></div>
+  </section>
+
+  <!-- Builder -->
+  <section id="page-builder" class="page">
+    <h2>Builder</h2>
+    <p>À venir : éditeur de mise en page façon “blocks”.</p>
+    <pre id="preview"></pre>
+    <div class="actions">
+      <button id="btn-preview">Aperçu avec mes données</button>
+    </div>
+  </section>
+
+  <script>
+    // Tab logic
+    document.querySelectorAll('.tabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('page-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Helpers
+    function val(id){ return document.getElementById(id).value.trim(); }
+    function set(id, v){ document.getElementById(id).value = v ?? ""; }
+
+    async function loadProfile() {
+      const r = await fetch('/api/profile', { credentials:'include' });
+      if (!r.ok) return;
+      const p = await r.json();
+
+      set('full_name', p.full_name);
+      set('title', p.title);
+      set('tagline', p.tagline);
+      set('email', p.email);
+      set('phone', p.phone);
+      set('location', p.location);
+      set('website', p.website);
+      set('linkedin', p.linkedin);
+      set('github', p.github);
+      set('summary', p.summary);
+      set('skills', (p.skills||[]).join(', '));
+
+      document.getElementById('experiences').value = JSON.stringify(p.experiences || [], null, 2);
+      document.getElementById('education').value   = JSON.stringify(p.education || [], null, 2);
+      document.getElementById('projects').value    = JSON.stringify(p.projects || [], null, 2);
+    }
+
+    async function saveProfile() {
+      const data = {
+        full_name: val('full_name') || null,
+        title: val('title') || null,
+        tagline: val('tagline') || null,
+        email: val('email') || null,
+        phone: val('phone') || null,
+        location: val('location') || null,
+        website: val('website') || null,
+        linkedin: val('linkedin') || null,
+        github: val('github') || null,
+        summary: val('summary') || null,
+        skills: val('skills') ? val('skills').split(',').map(s => s.trim()).filter(Boolean) : [],
+        experiences: parseJsonSafe(document.getElementById('experiences').value),
+        education: parseJsonSafe(document.getElementById('education').value),
+        projects: parseJsonSafe(document.getElementById('projects').value),
+      };
+      const r = await fetch('/api/profile', {
+        method:'POST',
+        headers: {'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify(data)
+      });
+      document.getElementById('save-status').textContent = r.ok ? 'Sauvegardé.' : 'Erreur sauvegarde.';
+    }
+
+    function parseJsonSafe(s){
+      if(!s.trim()) return [];
+      try { return JSON.parse(s); } catch { return []; }
+    }
+
+    document.getElementById('btn-save').addEventListener('click', saveProfile);
+    document.getElementById('btn-reload').addEventListener('click', loadProfile);
+
+    document.getElementById('file-import').addEventListener('change', async (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const text = await f.text();
+      const r = await fetch('/api/profile/import', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: text
+      });
+      if (r.ok) { await loadProfile(); alert('Import OK'); }
+      else alert('Import FAIL');
+    });
+
+    document.getElementById('btn-preview').addEventListener('click', async () => {
+      const r = await fetch('/api/profile', { credentials:'include' });
+      const p = r.ok ? await r.json() : {};
+      document.getElementById('preview').textContent = JSON.stringify(p, null, 2);
+    });
+
+    // Bootstrap
+    loadProfile();
+  </script>
+</body>
+</html>
