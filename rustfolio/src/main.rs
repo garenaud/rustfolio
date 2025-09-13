@@ -14,6 +14,7 @@ use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
     middleware::from_fn_with_state,
+    response::IntoResponse,               // <-- nécessaire pour .into_response()
     routing::{get, get_service},
     serve, Router,
 };
@@ -28,7 +29,6 @@ use crate::state::AppState;
 
 #[tokio::main]
 async fn main() {
-
     // Charge les variables du .env (dev)
     dotenvy::dotenv().ok();
 
@@ -37,7 +37,7 @@ async fn main() {
         .await
         .expect("failed to connect DB");
 
-    // --- Données JSON statiques pour tes pages SSR ---
+    // --- Données JSON statiques (si tu les utilises dans tes pages SSR) ---
     let exp: Vec<data::Experience> = serde_json::from_str(
         &std::fs::read_to_string("data/experience_fr.json").expect("read experience_fr.json"),
     )
@@ -62,7 +62,7 @@ async fn main() {
     };
 
     // --- SPA tableau de bord protégée (/dashboard) ---
-    // Sert tous les fichiers du dossier et fallback sur index.html pour /dashboard/*.
+    // Sert les fichiers statiques et fallback sur index.html pour /dashboard/*.
     let dashboard_service = get_service(
         ServeDir::new("assets/dashboard")
             .fallback(ServeFile::new("assets/dashboard/index.html")),
@@ -81,21 +81,44 @@ async fn main() {
     // --- App principale ---
     let app = Router::new()
         // Pages SSR
-        .route("/", get(pages::home))
-        .route("/projects", get(pages::projects_page))
-        .route("/portfolio", get(pages::portfolio_page))
+        .route("/", axum::routing::get(pages::home))
+        // .route("/projects", get(pages::projects_page))
+        // .route("/portfolio", get(pages::portfolio_page))
+
         // API publiques
         .route("/api/info", get(api::info_handler))
         .route("/api/projects", get(api::api_projects))
+
         // Santé & statiques (hors dashboard)
         .route("/health", get(health::health))
         .nest_service("/assets", ServeDir::new("assets"))
         .nest_service("/data", ServeDir::new("data"))
+
         // Auth & API profil
         .nest("/auth", auth::router())
         .nest("/api", profile::router())
+
+        // Debug Askama : rend directement le template HomeTpl (idéal pour diagnostiquer)
+        .route("/__debug/inline", axum::routing::get(pages::debug_inline))
+
+        .route("/__debug/home_raw", get(|| async {
+            use askama::Template;
+            use crate::templates::HomeTpl;
+            use chrono::Datelike;
+
+            let t = HomeTpl { year: chrono::Utc::now().year() };
+            match t.render() {
+                Ok(html) => axum::response::Html(html).into_response(),
+                Err(e) => (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Askama render error: {e:?}")
+                ).into_response(),
+            }
+        }))
+
         // Dashboard (protégé)
         .merge(dashboard_router)
+
         // State pour tout l’arbre
         .with_state(state);
 

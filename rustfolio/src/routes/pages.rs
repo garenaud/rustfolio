@@ -6,12 +6,20 @@ use chrono::Datelike;
 use crate::templates::{HomeTpl, ProjectsTpl, PortfolioTpl};
 use crate::state::AppState;
 
+
+#[derive(Template)]
+#[template(source = "<h1>OK inline {{ year }}</h1>", ext = "html")]
+pub struct InlineTpl {
+    pub year: i32,
+}
+
+pub async fn debug_inline() -> InlineTpl {
+    InlineTpl { year: chrono::Utc::now().year() }
+}
+
 // Pas d'emprunt -> on peut retourner directement le Template
-pub async fn home() -> axum::response::Html<String> {
-    let html = HomeTpl { year: chrono::Utc::now().year() }
-        .render()
-        .expect("render home.html");
-    axum::response::Html(html)
+pub async fn home() -> HomeTpl {
+    HomeTpl { year: chrono::Utc::now().year() }
 }
 
 // Emprunts -> on rend en String puis Html<String>

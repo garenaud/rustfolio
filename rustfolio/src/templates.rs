@@ -2,7 +2,7 @@ use askama::Template;
 
 // Accueil
 #[derive(Template)]
-#[template(path = "home.html")]
+#[template(path = "index.html")]
 pub struct HomeTpl {
     pub year: i32,
 }
