@@ -5,17 +5,11 @@ use crate::router::Route;
 #[function_component(Nav)]
 pub fn nav() -> Html {
     html! {
-      <nav style="display:flex; gap:1rem; padding:0.5rem 1rem; border-bottom:1px solid #ddd;">
-        <Link<Route> to={Route::Profile}>{"Profil"}</Link<Route>>
-        <Link<Route> to={Route::CvForm}>{"CV"}</Link<Route>>
-        <Link<Route> to={Route::Builder}>{"Builder"}</Link<Route>>
-        <a href="/auth/logout" onclick={
-            Callback::from(|e: web_sys::MouseEvent| {
-                // simple lien POST plus tard; pour l'instant on redirige
-                e.prevent_default();
-                web_sys::window().unwrap().location().set_href("/auth/logout").ok();
-            })
-        }>{"Se déconnecter"}</a>
-      </nav>
+        <nav class="flex items-center gap-3 border-b border-gray-700/50 p-3">
+            <Link<Route> to={Route::Overview} classes="px-3 py-1 rounded hover:underline">{"Aperçu"}</Link<Route>>
+            <Link<Route> to={Route::Account}  classes="px-3 py-1 rounded hover:underline">{"Compte"}</Link<Route>>
+            <Link<Route> to={Route::Profile}  classes="px-3 py-1 rounded hover:underline">{"Profil/CV"}</Link<Route>>
+            <Link<Route> to={Route::Builder}  classes="px-3 py-1 rounded hover:underline">{"Builder"}</Link<Route>>
+        </nav>
     }
 }

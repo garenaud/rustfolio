@@ -1,25 +1,22 @@
 use yew::prelude::*;
 
-#[function_component(BuilderPage)]
+#[function_component(Builder)]
 pub fn builder() -> Html {
     html! {
-        <>
-          <h1>{"Builder"}</h1>
-          <p>{"Prototype: grille d’éléments (sections / colonnes / modules), drag & drop plus tard."}</p>
-          <div style="display:grid; grid-template-columns: 1fr 3fr; gap:1rem;">
-            <aside style="border:1px solid #ddd; padding:0.5rem;">
-              <h3>{"Modules"}</h3>
-              <ul>
-                <li>{"En-tête"}</li>
-                <li>{"Texte"}</li>
-                <li>{"Carte d’expérience"}</li>
-                <li>{"Liste de compétences"}</li>
-              </ul>
-            </aside>
-            <section style="border:1px solid #ddd; padding:0.5rem; min-height:300px;">
-              <p>{"Zone de composition (droppable) — on y rendra un arbre d’éléments."}</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <section class="space-y-3">
+                <h2 class="text-xl font-semibold">{"Sections"}</h2>
+                <button class="px-3 py-1 rounded border">{"+ Expérience"}</button>
+                <button class="px-3 py-1 rounded border">{"+ Compétence"}</button>
+                <button class="px-3 py-1 rounded border">{"+ Projet"}</button>
             </section>
-          </div>
-        </>
+            <section class="border rounded p-4">
+                <h3 class="font-semibold mb-2">{"Prévisualisation"}</h3>
+                <div class="text-sm opacity-80">{"(Ici on rendra le template CV avec vos données.)"}</div>
+                <div class="mt-3">
+                    <button class="px-3 py-1 rounded border">{"Exporter en HTML statique"}</button>
+                </div>
+            </section>
+        </div>
     }
 }

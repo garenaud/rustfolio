@@ -359,6 +359,10 @@ function __wbg_get_imports() {
         const ret = Array.from(arg0);
         return ret;
     };
+    imports.wbg.__wbg_getElementById_6cd98fa4e2fb8b6b = function(arg0, arg1, arg2) {
+        const ret = arg0.getElementById(getStringFromWasm0(arg1, arg2));
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
     imports.wbg.__wbg_get_a131a44bd1eb6979 = function(arg0, arg1) {
         const ret = arg0[arg1 >>> 0];
         return ret;
@@ -571,11 +575,11 @@ function __wbg_get_imports() {
         const ret = false;
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper241 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper243 = function(arg0, arg1, arg2) {
         const ret = makeClosure(arg0, arg1, 53, __wbg_adapter_20);
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper668 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper670 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 131, __wbg_adapter_23);
         return ret;
     };

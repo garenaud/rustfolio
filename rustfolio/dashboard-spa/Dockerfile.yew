@@ -1,0 +1,5 @@
+# Dev image pour Trunk + wasm
+FROM rust:1.80 AS dev
+RUN rustup target add wasm32-unknown-unknown && cargo install trunk
+WORKDIR /work
+# Trunk va lire /work/Trunk.toml et écrire dans /assets (monté par docker-compose)

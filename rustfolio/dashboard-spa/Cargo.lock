@@ -91,11 +91,13 @@ dependencies = [
 name = "dashboard-spa"
 version = "0.1.0"
 dependencies = [
+ "console_error_panic_hook",
  "gloo 0.11.0",
- "gloo-net 0.5.0",
+ "log",
  "serde",
  "serde_json",
  "wasm-bindgen",
+ "wasm-logger",
  "yew",
  "yew-router",
 ]
@@ -1211,6 +1213,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f143854a3b13752c6950862c906306adb27c7e839f7414cec8fea35beab624c1"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "wasm-logger"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "074649a66bb306c8f2068c9016395fa65d8e08d2affcbf95acf3c24c3ab19718"
+dependencies = [
+ "log",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
