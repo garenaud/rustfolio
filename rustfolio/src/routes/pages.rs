@@ -1,10 +1,19 @@
-// src/routes/pages.rs
 use askama::Template;              // <- pour avoir .render()
-use askama_axum::IntoResponse;     // <- pour home() si tu retournes un Template
+//use askama_axum::IntoResponse;     // <- pour home() si tu retournes un Template
 use chrono::Datelike;
 
 use crate::templates::{HomeTpl, ProjectsTpl, PortfolioTpl};
 use crate::state::AppState;
+
+#[derive(Template)]
+#[template(path = "dashboard.html")]
+pub struct DashboardTpl {
+    pub year: i32,
+}
+
+pub async fn dashboard_shell() -> DashboardTpl {
+    DashboardTpl { year: chrono::Utc::now().year() }
+}
 
 
 #[derive(Template)]

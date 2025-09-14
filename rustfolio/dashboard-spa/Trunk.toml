@@ -1,0 +1,4 @@
+[build]
+# IMPORTANT: on sort directement le bundle dans les assets du serveur
+dist = "../assets/dashboard"
+filehash = false

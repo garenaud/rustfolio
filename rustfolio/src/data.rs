@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Experience {
     pub date: String,
     pub r#type: String,
@@ -10,7 +10,7 @@ pub struct Experience {
     pub tasks: Vec<String>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Project {
     pub title: String,
     pub description: String,
@@ -20,10 +20,10 @@ pub struct Project {
     pub repo_link: String,
     #[serde(rename = "pdfLink")]
     pub pdf_link: String,
-    pub image: String, // ex: "/assets/img/projet.png"
+    pub image: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Skill {
     pub name: String,
     pub percentage: u8,

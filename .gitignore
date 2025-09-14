@@ -34,3 +34,5 @@ docker-data/
 *.db-wal
 *.sqlite
 *.sqlite3
+
+*.wasm

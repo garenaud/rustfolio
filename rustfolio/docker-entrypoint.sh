@@ -2,7 +2,6 @@
 set -eu
 
 # --- Réglages/Defaults ---
-# Dossier de l'app (peut être override via APP_DIR dans docker-compose)
 APP_DIR="${APP_DIR:-/app/rustfolio}"
 MIGRATIONS="${MIGRATIONS:-$APP_DIR/migrations}"
 DATABASE_URL="${DATABASE_URL:-sqlite://$APP_DIR/app.db}"
@@ -11,33 +10,36 @@ echo "APP_DIR=$APP_DIR"
 echo "DATABASE_URL=$DATABASE_URL"
 echo "MIGRATIONS=$MIGRATIONS"
 
-mkdir -p /app/data || true
-
-# --- Création DB (ignore si existe déjà) ---
-# Certains sqlx-cli n'ont pas --skip-if-exists, on ignore l'erreur proprement.
-sqlx database create || true
-
-# --- Fonction utilitaire: résout le chemin physique de la DB si SQLite ---
+# --- Résout le chemin physique de la DB si SQLite ---
 resolve_sqlite_path() {
   dburl="$1"
   case "$dburl" in
     sqlite://*)
-      raw="${dburl#sqlite://}"       
-      raw="${raw%%\?*}"              
+      raw="${dburl#sqlite://}"      # enlève sqlite://
+      raw="${raw%%\?*}"             # enlève une éventuelle query (?mode=…)
       case "$raw" in
-        ""|":memory:") echo "" ;;    
+        ""|":memory:") echo "" ;;   # mémoire: pas de fichier
         /*)            echo "$raw" ;;
-        *)             echo "$APP_DIR/$raw" ;;
+        *)             echo "$APP_DIR/$raw" ;;  # chemin relatif -> sous APP_DIR
       esac
       ;;
     *)
-      echo ""
+      echo ""                        # pas SQLite
       ;;
   esac
 }
 
 DB_PATH="$(resolve_sqlite_path "$DATABASE_URL")"
 
+# --- Crée le dossier parent du fichier SQLite si applicable ---
+if [ -n "$DB_PATH" ]; then
+  mkdir -p "$(dirname "$DB_PATH")"
+fi
+
+# --- Création DB (ignore si existe déjà) ---
+sqlx database create || true
+
+# --- Migrations ---
 set +e
 out="$(sqlx migrate run --source "$MIGRATIONS" 2>&1)"
 code=$?

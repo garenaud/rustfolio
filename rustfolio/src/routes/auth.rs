@@ -7,7 +7,7 @@ use axum::{
 };
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use askama::Template;
-use askama_axum::IntoResponse as _; // permet aux Templates Askama de devenir une Response
+//use askama_axum::IntoResponse as _; // permet aux Templates Askama de devenir une Response
 use chrono::Datelike;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

@@ -1,22 +1,40 @@
-FROM rust:latest
-
-RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-      pkg-config libssl-dev ca-certificates libsqlite3-dev sqlite3 \
- && rm -rf /var/lib/apt/lists/*
-
-# Hot reload
+# ========= DEV (cargo-watch) =========
+FROM rust:1.80 AS dev
 RUN cargo install cargo-watch
-
-# SQLx CLI
-RUN cargo install sqlx-cli --no-default-features --features sqlite,rustls
-
 WORKDIR /app
+# Les sources sont montées par le volume dans docker-compose (pas copiées ici)
+ENV CARGO_HOME=/usr/local/cargo
 
-# Entrypoint (migrations + commande)
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
- && sed -i '1s/^\xEF\xBB\xBF//' /usr/local/bin/docker-entrypoint.sh \
- && chmod 755 /usr/local/bin/docker-entrypoint.sh
+# ========= PROD - build Yew =========
+FROM rust:1.80 AS yew-build
+RUN rustup target add wasm32-unknown-unknown && cargo install trunk
+WORKDIR /src
+# On a besoin de dashboard-spa et de assets (Trunk.toml écrit dedans)
+COPY dashboard-spa/ ./dashboard-spa/
+COPY assets/ ./assets/
+WORKDIR /src/dashboard-spa
+RUN trunk build --release
 
-ENTRYPOINT ["/bin/sh", "/usr/local/bin/docker-entrypoint.sh"]
+# ========= PROD - build API =========
+FROM rust:1.80 AS api-build
+WORKDIR /src
+COPY Cargo.toml Cargo.lock ./
+# (si workspace: COPY crates/ crates/ etc.)
+# cache deps
+RUN mkdir -p src && echo "fn main(){}" > src/main.rs
+RUN cargo build --release && rm -rf target/release/deps/server*
+# build réel
+COPY . .
+RUN cargo build --release --bin server
+
+# ========= PROD - runtime =========
+FROM gcr.io/distroless/cc-debian12 AS prod
+WORKDIR /app
+COPY --from=api-build /src/target/release/server /app/server
+COPY assets /app/assets
+COPY --from=yew-build /src/assets/dashboard /app/assets/dashboard
+COPY templates /app/templates
+COPY public /app/public
+EXPOSE 8080
+USER 65532:65532
+ENTRYPOINT ["/app/server"]

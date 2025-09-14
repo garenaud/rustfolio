@@ -14,14 +14,12 @@ use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
     middleware::from_fn_with_state,
-    response::IntoResponse,               // <-- nécessaire pour .into_response()
-    routing::{get, get_service},
+    routing::get,
     serve, Router,
 };
-use axum::http::StatusCode;
 use sqlx::SqlitePool;
 use tokio::net::TcpListener;
-use tower_http::services::{ServeDir, ServeFile};
+use tower_http::services::ServeDir;
 
 use crate::middleware::require_auth;
 use crate::routes::{api, auth, health, pages, profile};
@@ -29,100 +27,54 @@ use crate::state::AppState;
 
 #[tokio::main]
 async fn main() {
-    // Charge les variables du .env (dev)
-    dotenvy::dotenv().ok();
+    // charge .env en dev (ne panique pas si absent)
+    let _ = dotenvy::dotenv();
 
     // --- DB ---
-    let db = SqlitePool::connect(&std::env::var("DATABASE_URL").expect("DATABASE_URL not set"))
+    let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL not set");
+    let db = SqlitePool::connect(&db_url)
         .await
         .expect("failed to connect DB");
 
-    // --- Données JSON statiques (si tu les utilises dans tes pages SSR) ---
-    let exp: Vec<data::Experience> = serde_json::from_str(
-        &std::fs::read_to_string("data/experience_fr.json").expect("read experience_fr.json"),
-    )
-    .expect("parse experience_fr.json");
-
-    let projects: Vec<data::Project> = serde_json::from_str(
-        &std::fs::read_to_string("data/projects.json").expect("read projects.json"),
-    )
-    .expect("parse projects.json");
-
-    let skills: Vec<data::Skill> = serde_json::from_str(
-        &std::fs::read_to_string("data/skills.json").expect("read skills.json"),
-    )
-    .expect("parse skills.json");
-
-    // --- State partagé ---
+    // --- State partagé (sans données JSON) ---
     let state = AppState {
         db,
-        _experiences: Arc::new(exp),
-        projects: Arc::new(projects),
-        skills: Arc::new(skills),
+        // si ces champs existent encore dans AppState, on les initialise vides
+        _experiences: Arc::new(Vec::<data::Experience>::new()),
+        projects:     Arc::new(Vec::<data::Project>::new()),
+        skills:       Arc::new(Vec::<data::Skill>::new()),
     };
 
-    // --- SPA tableau de bord protégée (/dashboard) ---
-    // Sert les fichiers statiques et fallback sur index.html pour /dashboard/*.
-    let dashboard_service = get_service(
-        ServeDir::new("assets/dashboard")
-            .fallback(ServeFile::new("assets/dashboard/index.html")),
-    )
-    .handle_error(|err| async move {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("static error: {err}"),
-        )
-    });
+    // --- Assets statiques globaux ---
+    let assets_router = Router::new()
+        .nest_service("/assets", ServeDir::new("assets"));
 
+    // --- Dashboard protégé (shell SSR qui charge la SPA Yew) ---
     let dashboard_router = Router::new()
-        .nest_service("/dashboard", dashboard_service)
+        .route("/dashboard", get(pages::dashboard_shell))
+        .route("/dashboard/*rest", get(pages::dashboard_shell))
         .route_layer(from_fn_with_state(state.clone(), require_auth));
 
     // --- App principale ---
     let app = Router::new()
         // Pages SSR
-        .route("/", axum::routing::get(pages::home))
-        // .route("/projects", get(pages::projects_page))
-        // .route("/portfolio", get(pages::portfolio_page))
-
+        .route("/", get(pages::home))
         // API publiques
         .route("/api/info", get(api::info_handler))
         .route("/api/projects", get(api::api_projects))
-
-        // Santé & statiques (hors dashboard)
+        // Santé
         .route("/health", get(health::health))
-        .nest_service("/assets", ServeDir::new("assets"))
-        .nest_service("/data", ServeDir::new("data"))
-
-        // Auth & API profil
+        // Auth & profil
         .nest("/auth", auth::router())
         .nest("/api", profile::router())
-
-        // Debug Askama : rend directement le template HomeTpl (idéal pour diagnostiquer)
-        .route("/__debug/inline", axum::routing::get(pages::debug_inline))
-
-        .route("/__debug/home_raw", get(|| async {
-            use askama::Template;
-            use crate::templates::HomeTpl;
-            use chrono::Datelike;
-
-            let t = HomeTpl { year: chrono::Utc::now().year() };
-            match t.render() {
-                Ok(html) => axum::response::Html(html).into_response(),
-                Err(e) => (
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Askama render error: {e:?}")
-                ).into_response(),
-            }
-        }))
-
-        // Dashboard (protégé)
+        // Assets
+        .merge(assets_router)
+        // Dashboard
         .merge(dashboard_router)
-
-        // State pour tout l’arbre
+        // State global
         .with_state(state);
 
-    // --- Serveur HTTP (pas HTTPS en dev) ---
+    // --- Serveur HTTP ---
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     println!("Listening on http://{}", addr);
     let listener = TcpListener::bind(addr).await.unwrap();

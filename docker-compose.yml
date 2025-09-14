@@ -1,44 +1,56 @@
 services:
-  dev:
+  api:
     build:
-      context: .
+      context: ./rustfolio
       dockerfile: Dockerfile.dev
     working_dir: /app/rustfolio
-
-    command:
-      ["/usr/local/cargo/bin/cargo", "watch",
-       "--poll",
-       "-w", "src",
-       "-w", "Cargo.toml",
-       "--why",
-       "-x", "run"]
-
+    # Lis tes variables (mail, etc.) depuis le .env à la racine
     env_file:
-      - .env
-
+      - ./.env
+    # On fixe le chemin SQLite attendu par l’entrypoint
     environment:
-      - RUST_LOG=info
-      - SQLX_OFFLINE=false
-      - DEV_RESET_DB_ON_MIGRATION_MISMATCH=1
-      - APP_DIR=/app/rustfolio
-      - DEV_RESET_DB_ON_MIGRATION_MISMATCH=1
-
+      RUST_LOG: info
+      DATABASE_URL: sqlite:///app/rustfolio/data/dev.db
+    # L’entrypoint prépare la DB + migrations, puis exécute cette commande
+    command: ["/usr/local/cargo/bin/cargo", "watch", "-x", "run --bin rustfolio"]
     ports:
       - "8080:8080"
-
     volumes:
-      - ./:/app:cached
-      - app-data:/app/data
+      - ./rustfolio:/app/rustfolio:Z
+      - dbdata:/app/rustfolio/data
       - cargo-registry:/usr/local/cargo/registry
-      - cargo-git:/usr/local/cargo/git
-      - target-cache:/app/rustfolio/target
+      - cargo-target:/usr/local/cargo/target
 
-    tty: true
-    stdin_open: true
-    restart: unless-stopped
+  yew:
+    image: rust:1.85
+    working_dir: /work
+    command: >
+      bash -lc "
+        apt-get update && apt-get install -y curl ca-certificates >/dev/null &&
+        (command -v /usr/local/cargo/bin/rustup >/dev/null || (curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.85.0)) &&
+        . /usr/local/cargo/env &&
+        /usr/local/cargo/bin/rustup target add wasm32-unknown-unknown &&
+        /usr/local/cargo/bin/cargo install trunk --locked >/dev/null 2>&1 || true &&
+        /usr/local/cargo/bin/trunk watch --release
+      "
+    volumes:
+      - ./rustfolio/dashboard-spa:/work:Z
+      - ./rustfolio/assets:/assets:Z
+      - wasm-registry:/root/.cargo/registry
+      - wasm-target:/root/target
+
+  app:
+    build:
+      context: ./rustfolio
+      dockerfile: Dockerfile
+    image: rustfolio:prod
+    ports:
+      - "8080:8080"
+    profiles: ["prod"]
 
 volumes:
   cargo-registry:
-  cargo-git:
-  target-cache:
-  app-data:
+  cargo-target:
+  wasm-registry:
+  wasm-target:
+  dbdata:

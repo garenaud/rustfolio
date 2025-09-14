@@ -1,4 +1,13 @@
-mod app;
+use yew::prelude::*;
+use yew::Renderer;
+
+#[function_component(App)]
+fn app() -> Html {
+    html! {
+        <div id="dashboard-root">{ "Dashboard SPA is running." }</div>
+    }
+}
+
 fn main() {
-    yew::Renderer::<app::App>::new().render();
+    Renderer::<App>::new().render();
 }
