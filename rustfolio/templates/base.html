@@ -5,15 +5,51 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{% block title %}Rustfolio{% endblock %}</title>
-  <link rel="stylesheet" href="assets/css/style.css">
-
+  <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
-  <header>…navbar…</header>
+  <header>
+    <nav class="navbar container">
+      <a class="navbar__brand" href="/">Rustfolio</a>
+
+      <div class="navbar__spacer"></div>
+
+      <!-- Liens si non connecté -->
+      <div id="nav-public" class="navbar__cta">
+        <a class="navbar__link" href="/auth/login">Connexion</a>
+        <a class="btn btn--ghost" href="/auth/signup">Créer un compte</a>
+      </div>
+
+      <!-- Liens si connecté -->
+      <div id="nav-auth" class="navbar__cta hidden">
+        <a class="navbar__link" href="/">Accueil</a>
+        <form id="logout-form" method="post" action="/auth/logout" style="display:inline">
+          <button class="btn btn--ghost" type="submit">Déconnexion</button>
+        </form>
+      </div>
+    </nav>
+  </header>
+
   <main class="container">
     {% block content %}{% endblock %}
   </main>
-  <footer>© {{ year }} • Rustfolio</footer>
+
+  <footer>
+    © {{ year }} • Rustfolio
+  </footer>
+
+  <script>
+    // Toggle navbar selon /auth/session
+    fetch('/auth/session', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.authenticated) {
+          document.getElementById('nav-public')?.classList.add('hidden');
+          document.getElementById('nav-auth')?.classList.remove('hidden');
+        }
+      })
+      .catch(() => {});
+  </script>
 </body>
 </html>
 {%- endblock %}
