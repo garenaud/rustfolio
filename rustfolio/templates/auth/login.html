@@ -1,4 +1,4 @@
-{% raw %}{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block title %}Connexion • Rustfolio{% endblock %}
 
@@ -10,7 +10,10 @@
 
 <div class="grid">
   <div class="col-12 card">
-    {% if error %}<div class="alert alert--danger">{{ error }}</div>{% endif %}
+    {% if let Some(e) = error %}
+      <div class="alert alert--danger">{{ e }}</div>
+    {% endif %}
+
 
     <form class="form" method="post" action="/auth/login">
       <div class="form__row">
@@ -30,4 +33,4 @@
     </form>
   </div>
 </div>
-{% endblock %}{% endraw %}
+{% endblock %}

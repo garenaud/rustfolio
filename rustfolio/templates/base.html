@@ -1,55 +1,19 @@
-{% raw %}{% block doc -%}
+{% block doc -%}
 <!doctype html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{% block title %}Rustfolio{% endblock %}</title>
-  <link rel="stylesheet" href="/assets/css/styles.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+
 </head>
 <body>
-  <header>
-    <nav class="navbar container">
-      <a class="navbar__brand" href="/">Rustfolio</a>
-
-      <a class="navbar__link" href="/projects">Projets</a>
-      <a class="navbar__link" href="/portfolio">Portfolio</a>
-
-      <div class="navbar__spacer"></div>
-
-      <!-- Liens visibles si non connecté -->
-      <div id="nav-public" class="navbar__cta">
-        <a class="navbar__link" href="/auth/login">Login</a>
-        <a class="btn btn--ghost" href="/auth/signup">Créer un compte</a>
-      </div>
-
-      <!-- Liens visibles si connecté -->
-      <div id="nav-auth" class="navbar__cta hidden">
-        <a class="navbar__link" href="/dashboard">Dashboard</a>
-        <form id="logout-form" method="post" action="/auth/logout" style="display:inline">
-          <button class="btn btn--ghost" type="submit">Logout</button>
-        </form>
-      </div>
-    </nav>
-  </header>
-
+  <header>…navbar…</header>
   <main class="container">
     {% block content %}{% endblock %}
   </main>
-
-  <footer>
-    <div class="container">© {{ year }} • Rustfolio</div>
-  </footer>
-
-  <script>
-  // Toggle navbar selon /auth/me (200 si connecté)
-  fetch('/auth/me', {credentials:'include'})
-    .then(r => { if(r.ok){ 
-      document.getElementById('nav-public')?.classList.add('hidden');
-      document.getElementById('nav-auth')?.classList.remove('hidden');
-    }})
-    .catch(()=>{});
-  </script>
+  <footer>© {{ year }} • Rustfolio</footer>
 </body>
 </html>
-{%- endblock %}{% endraw %}
+{%- endblock %}
