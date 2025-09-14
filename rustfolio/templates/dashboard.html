@@ -3,16 +3,13 @@
 
 {% block content %}
   <section class="container mx-auto p-6">
-    <h1 class="text-2xl font-bold mb-4">Dashboard {{ year }}</h1>
-    <div id="dashboard-root"></div>
-
-    <!-- injecte le bundle Yew ici -->
+<div id="dashboard-root"></div>
 <script type="module">
   import init from "/assets/dashboard/dashboard-spa.js";
-  init()
-    .then(() => console.log("Yew init ok"))
-    .catch(e => console.error("Yew init failed:", e));
+  init().then(()=>console.log("✅ Yew init ok"))
+        .catch(e=>console.error("❌ Yew init failed:", e));
 </script>
+
 
   </section>
 {% endblock %}

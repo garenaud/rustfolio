@@ -4,14 +4,11 @@ services:
       context: ./rustfolio
       dockerfile: Dockerfile.dev
     working_dir: /app/rustfolio
-    # Lis tes variables (mail, etc.) depuis le .env à la racine
     env_file:
       - ./.env
-    # On fixe le chemin SQLite attendu par l’entrypoint
     environment:
       RUST_LOG: info
       DATABASE_URL: sqlite:///app/rustfolio/data/dev.db
-    # L’entrypoint prépare la DB + migrations, puis exécute cette commande
     command: ["/usr/local/cargo/bin/cargo", "watch", "-x", "run --bin rustfolio"]
     ports:
       - "8080:8080"
@@ -22,22 +19,18 @@ services:
       - cargo-target:/usr/local/cargo/target
 
   yew:
-    image: rust:1.85
+    build:
+      context: .
+      dockerfile: Dockerfile.yew   # <= on utilise TON Dockerfile.yew
     working_dir: /work
-    command: >
-      bash -lc "
-        apt-get update && apt-get install -y curl ca-certificates >/dev/null &&
-        (command -v /usr/local/cargo/bin/rustup >/dev/null || (curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.85.0)) &&
-        . /usr/local/cargo/env &&
-        /usr/local/cargo/bin/rustup target add wasm32-unknown-unknown &&
-        /usr/local/cargo/bin/cargo install trunk --locked >/dev/null 2>&1 || true &&
-        /usr/local/cargo/bin/trunk watch --release
-      "
+    # IMPORTANT: pas de TRUNK_LOG ici (sinon conflit avec -v du CMD)
     volumes:
       - ./rustfolio/dashboard-spa:/work:Z
       - ./rustfolio/assets:/assets:Z
       - wasm-registry:/root/.cargo/registry
       - wasm-target:/root/target
+    # pas de "command:" -> on garde le CMD du Dockerfile.yew
+    # ce CMD lance: trunk watch --release --dist /assets/dashboard ...
 
   app:
     build:

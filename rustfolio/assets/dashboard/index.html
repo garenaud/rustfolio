@@ -1,11 +1,15 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="fr">
   <head>
-    <meta charset="utf-8"/>
+    <meta charset="utf-8" />
+    <title>Dashboard SPA</title>
+  <link rel="modulepreload" href="/assets/dashboard/dashboard-spa.js" crossorigin=anonymous integrity="sha384-2NMUgQZaHnwk+rHic5LPxZGB0Gg22fv/5vY8P7Qvh5H7ZBXyMdlA0g0esSoQQcBQ"><link rel="preload" href="/assets/dashboard/dashboard-spa_bg.wasm" crossorigin=anonymous integrity="sha384-Uqq2L0AK6J7Bzfga+jgqaSJK4p2Ky/bCok8Avi6YNTR/b1OdhHa9GdKlYhAcA34s" as="fetch" type="application/wasm"></head>
+  <body>
+    <div id="dashboard-root"></div>
     
-<script type="module">
-import init, * as bindings from '/dashboard-spa.js';
-const wasm = await init({ module_or_path: '/dashboard-spa_bg.wasm' });
+<script type="module" nonce="3z295iMC7qWYWwtcbZIJkw==">
+import init, * as bindings from '/assets/dashboard/dashboard-spa.js';
+const wasm = await init('/assets/dashboard/dashboard-spa_bg.wasm');
 
 
 window.wasmBindings = bindings;
@@ -14,6 +18,5 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-  <link rel="modulepreload" href="/dashboard-spa.js" crossorigin="anonymous" integrity="sha384-+02DlaZxvLiOaSIAIUlMxnKa4I3A/rmC5BLgGFzYBSfBd/VSsCe3CHeK3KWKDR4w"><link rel="preload" href="/dashboard-spa_bg.wasm" crossorigin="anonymous" integrity="sha384-kc0hYsnaJaROWEkmcDtTlmM414Q9P/LhEU/hbCZ4C2fFd3bmIVt21drHj3jKJJ3M" as="fetch" type="application/wasm"></head>
-  <body></body>
+  </body>
 </html>

@@ -3,9 +3,9 @@ use yew::prelude::*;
 #[function_component(Overview)]
 pub fn overview() -> Html {
     html! {
-        <div>
-            <h2 class="text-xl font-semibold mb-2">{"Aperçu"}</h2>
-            <p>{"Bienvenue sur votre dashboard."}</p>
-        </div>
+        <section class="p-8">
+            <h2 class="text-2xl font-bold mb-4">{"Overview"}</h2>
+            <p>{"Bienvenue sur ton dashboard."}</p>
+        </section>
     }
 }

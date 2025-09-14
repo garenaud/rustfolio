@@ -1,18 +1,17 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
-use crate::pages::{Overview, Account, Profile, Builder};
+use crate::pages::{Overview, Profile, Account, Builder};
 
-#[derive(Routable, PartialEq, Eq, Clone, Debug)]
+#[derive(Clone, Routable, PartialEq)]
 pub enum Route {
     #[at("/dashboard")]
     Overview,
-    #[at("/dashboard/account")]
-    Account,
     #[at("/dashboard/profile")]
     Profile,
+    #[at("/dashboard/account")]
+    Account,
     #[at("/dashboard/builder")]
     Builder,
-    // fallback pour sous-routes inconnues
     #[not_found]
     #[at("/dashboard/404")]
     NotFound,
@@ -21,9 +20,9 @@ pub enum Route {
 pub fn switch(route: Route) -> Html {
     match route {
         Route::Overview => html! { <Overview /> },
-        Route::Account  => html! { <Account /> },
         Route::Profile  => html! { <Profile /> },
+        Route::Account  => html! { <Account /> },
         Route::Builder  => html! { <Builder /> },
-        Route::NotFound => html! { <p>{"Not found"}</p> },
+        Route::NotFound => html! { <div>{ "Not found" }</div> },
     }
 }

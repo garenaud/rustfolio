@@ -1,7 +1,8 @@
 [build]
-target = "wasm32-unknown-unknown"
-release = true
 dist = "/assets/dashboard"
-
-[output]
+public_url = "/assets/dashboard/"
 filehash = false
+release = true
+
+[tools]
+wasm_bindgen = "0.2.92"

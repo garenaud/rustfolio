@@ -1,16 +1,19 @@
 use yew::prelude::*;
-use yew::Renderer;
-use gloo::utils::document;
+use yew_router::prelude::*;
 
-mod app;
+mod router;
+mod pages;
+
+#[function_component(App)]
+fn app() -> Html {
+    html! {
+        <BrowserRouter basename="/dashboard">
+            <pages::Nav />
+            <Switch<router::Route> render={router::switch} />
+        </BrowserRouter>
+    }
+}
 
 fn main() {
-    // logs + panics lisibles dans la console
-    console_error_panic_hook::set_once();
-    wasm_logger::init(wasm_logger::Config::default());
-
-    // Monte la SPA dans la div du template Askama: <div id="dashboard-root"></div>
-    let root = document().get_element_by_id("dashboard-root")
-        .expect("dashboard-root missing in dashboard.html");
-    Renderer::<app::App>::with_root(root).render();
+    yew::Renderer::<App>::new().render();
 }
