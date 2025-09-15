@@ -1,13 +1,15 @@
 use yew::prelude::*;
+use yew_router::prelude::*;
+use crate::Route;
 
 #[function_component(Nav)]
 pub fn nav() -> Html {
     html! {
         <nav style="display:flex; gap:12px; padding:8px; border-bottom:1px solid #ddd;">
-            <a href="/dashboard/">{ "Overview" }</a>
-            <a href="/dashboard/profile">{ "Profile" }</a>
-            <a href="/dashboard/account">{ "Account" }</a>
-            <a href="/dashboard/builder">{ "Builder" }</a>
+            <Link<Route> to={Route::Overview}>{ "Overview" }</Link<Route>>
+            <Link<Route> to={Route::Profile}>{ "Profile" }</Link<Route>>
+            <Link<Route> to={Route::Account}>{ "Account" }</Link<Route>>
+            <Link<Route> to={Route::Builder}>{ "Builder" }</Link<Route>>
         </nav>
     }
 }
