@@ -4,16 +4,16 @@ use crate::pages::{Overview, Profile, Account, Builder};
 
 #[derive(Clone, Routable, PartialEq)]
 pub enum Route {
-    #[at("/dashboard")]
+    #[at("/overview")]
     Overview,
-    #[at("/dashboard/profile")]
+    #[at("/profile")]
     Profile,
-    #[at("/dashboard/account")]
+    #[at("/account")]
     Account,
-    #[at("/dashboard/builder")]
+    #[at("/builder")]
     Builder,
     #[not_found]
-    #[at("/dashboard/404")]
+    #[at("/404")]
     NotFound,
 }
 
