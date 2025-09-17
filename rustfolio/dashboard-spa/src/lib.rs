@@ -31,7 +31,7 @@ fn switch(route: Route) -> Html {
 #[function_component(App)]
 pub fn app() -> Html {
     html! {
-        <BrowserRouter basename="/dashboard">
+        <BrowserRouter>
             <Nav/>
             <Switch<Route> render={switch} />
         </BrowserRouter>

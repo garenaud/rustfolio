@@ -15,6 +15,13 @@
       <div class="navbar__spacer"></div>
 
       <!-- Liens si non connecté -->
+       <div id="nav-auth" class="navbar__cta hidden">
+          <a class="navbar__link" href="/">Accueil</a>
+          <a class="navbar__link" href="/dashboard">Dashboard Overview</a> <!-- Ajout ici -->
+          <form id="logout-form" method="post" action="/auth/logout" style="display:inline">
+            <button class="btn btn--ghost" type="submit">Déconnexion</button>
+          </form>
+        </div>
       <div id="nav-public" class="navbar__cta">
         <a class="navbar__link" href="/auth/login">Connexion</a>
         <a class="btn btn--ghost" href="/auth/signup">Créer un compte</a>

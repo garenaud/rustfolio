@@ -2,14 +2,12 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-  <section class="container mx-auto p-6">
-<div id="dashboard-root"></div>
-<script type="module">
-  import init from "/assets/dashboard/dashboard-spa.js";
-  init().then(()=>console.log("✅ Yew init ok"))
-        .catch(e=>console.error("❌ Yew init failed:", e));
-</script>
-
-
-  </section>
+  <div class="dashboard">
+    <!-- Optionnel : une sidebar ici plus tard -->
+    <div id="dashboard-root"></div>
+    <script type="module">
+      import init from "/assets/dashboard/dashboard-spa.js";
+      init();
+    </script>
+  </div>
 {% endblock %}

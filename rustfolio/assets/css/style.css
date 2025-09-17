@@ -42,6 +42,9 @@
     -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
   }
   
+  main.container {
+  margin-top: 24px;
+}
   /* Layout utilitaires */
   .container{max-width:1080px; margin:0 auto; padding:24px}
   .stack-8>*{margin-block:8px}
@@ -190,9 +193,11 @@
   .project-card .tags{margin-top:8px}
   .project-card .actions{margin-top:14px; display:flex; gap:10px}
   
-  /* Dashboard scaffolding (pour plus tard) */
-  .dashboard{
-    display:grid; grid-template-columns:260px 1fr; gap:20px;
+  .dashboard {
+    min-height: 400px;
+    background: var(--surface);
+    position: relative;
+    z-index: 1;
   }
   @media (max-width: 960px){
     .dashboard{grid-template-columns:1fr}
