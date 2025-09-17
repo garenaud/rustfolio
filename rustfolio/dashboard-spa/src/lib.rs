@@ -4,6 +4,7 @@ use yew_router::prelude::*;
 // mod dashboard; // ton dossier avec mod.rs
 // use dashboard::{Nav, Overview, Profile, Account, Builder};
 
+mod router;
 mod pages;
 use pages::{Nav, Overview, Profile, Account, Builder};
 
