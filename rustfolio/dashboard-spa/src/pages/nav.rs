@@ -1,6 +1,6 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
-use crate::Route;
+use crate::router::Route; // <-- le bon chemin
 
 #[function_component(Nav)]
 pub fn nav() -> Html {
