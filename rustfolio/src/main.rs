@@ -8,6 +8,7 @@ mod routes {
     pub mod health;
     pub mod auth;
     pub mod profile;
+    pub mod cv; 
 }
 
 use std::{net::SocketAddr, sync::Arc};
@@ -30,51 +31,38 @@ async fn main() {
     // charge .env en dev (ne panique pas si absent)
     let _ = dotenvy::dotenv();
 
-    // --- DB ---
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL not set");
     let db = SqlitePool::connect(&db_url)
         .await
         .expect("failed to connect DB");
 
-    // --- State partagé (sans données JSON) ---
     let state = AppState {
         db,
-        // si ces champs existent encore dans AppState, on les initialise vides
         _experiences: Arc::new(Vec::<data::Experience>::new()),
         projects:     Arc::new(Vec::<data::Project>::new()),
         skills:       Arc::new(Vec::<data::Skill>::new()),
     };
 
-    // --- Assets statiques globaux ---
     let assets_router = Router::new()
         .nest_service("/assets", ServeDir::new("assets"));
 
-    // --- Dashboard protégé (shell SSR qui charge la SPA Yew) ---
     let dashboard_router = Router::new()
         .route("/dashboard", get(pages::dashboard_shell))
         .route("/dashboard/*rest", get(pages::dashboard_shell))
         .route_layer(from_fn_with_state(state.clone(), require_auth));
 
-    // --- App principale ---
     let app = Router::new()
-        // Pages SSR
         .route("/", get(pages::home))
-        // API publiques
         .route("/api/info", get(api::info_handler))
         .route("/api/projects", get(api::api_projects))
-        // Santé
         .route("/health", get(health::health))
-        // Auth & profil
         .nest("/auth", auth::router())
         .nest("/api", profile::router())
-        // Assets
+        .nest("/api", routes::cv::router()) 
         .merge(assets_router)
-        // Dashboard
         .merge(dashboard_router)
-        // State global
         .with_state(state);
 
-    // --- Serveur HTTP ---
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     println!("Listening on http://{}", addr);
     let listener = TcpListener::bind(addr).await.unwrap();

@@ -1,8 +1,7 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
-use crate::pages::{Overview, Profile, Account, Builder};
-use crate::components::Nav;   // <— PAS depuis pages
-
+use crate::pages::{Overview, Profile, Account, BuilderPage};
+use crate::components::Nav;
 
 #[derive(Routable, PartialEq, Clone, Debug)]
 pub enum Route {
@@ -14,13 +13,13 @@ pub enum Route {
     #[at("/dashboard/404")]     NotFound,
 }
 
-fn switch(route: Route) -> Html {
+pub fn switch(route: Route) -> Html {
     match route {
-        Route::Overview => html! { <Overview /> },
-        Route::Profile  => html! { <Profile  /> },
-        Route::Account  => html! { <Account  /> },
-        Route::Builder  => html! { <Builder  /> },
-        Route::NotFound => html! { <div class="p-4">{"Page introuvable"}</div> },
+        Route::Overview  => html!{ <Overview/> },
+        Route::Profile   => html!{ <Profile/> },
+        Route::Account   => html!{ <Account/> },
+        Route::Builder   => html!{ <BuilderPage/> },
+        Route::NotFound  => html!{ <div>{"404"}</div> },
     }
 }
 

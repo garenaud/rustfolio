@@ -2,9 +2,8 @@ use wasm_bindgen::prelude::*;
 use web_sys::Element;
 use yew::Renderer;
 
-mod router;
-mod pages;
-mod components;
+// ⚠️ on importe depuis la LIB (nom de crate = dashboard_spa)
+use dashboard_spa::router;
 
 fn boot() {
     #[cfg(debug_assertions)]

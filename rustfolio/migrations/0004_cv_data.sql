@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS cv_data (
+  user_id     TEXT PRIMARY KEY, 
+  data        TEXT NOT NULL DEFAULT '{}',
+  updated_at  TEXT DEFAULT CURRENT_TIMESTAMP
+);

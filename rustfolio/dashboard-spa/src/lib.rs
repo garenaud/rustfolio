@@ -2,5 +2,6 @@
 // (Sinon Cargo échoue à compiler la lib)
 
 pub mod components;
+pub mod store;
 pub mod pages;
 pub mod router;
