@@ -9,11 +9,13 @@ use crate::state::AppState;
 #[template(path = "dashboard.html")]
 pub struct DashboardTpl {
     pub year: i32,
+    pub message: &'static str,
 }
 
 pub async fn dashboard_shell() -> DashboardTpl {
-    DashboardTpl { year: chrono::Utc::now().year() }
+    DashboardTpl { year: chrono::Utc::now().year(), message: "Template Askama OK ! 🚀", }
 }
+
 
 
 #[derive(Template)]
