@@ -7,6 +7,7 @@ use wasm_bindgen_futures::spawn_local;
 use web_sys::{HtmlInputElement, HtmlTextAreaElement, RequestCredentials};
 
 use serde::{Serialize, Deserialize};
+//use crate::store::{AppStore, Row, Column, Widget};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 struct ProfileData {

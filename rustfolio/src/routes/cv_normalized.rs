@@ -1,0 +1,665 @@
+use axum::{
+    extract::{Path, State},
+    routing::{delete, get, post, put},
+    Json, Router,
+};
+use serde_json::json;
+use sqlx::{Pool, Sqlite};
+
+use crate::state::AppState;
+use crate::types::{CvData, Experience, Profile, Project, Skill};
+
+fn uid() -> String {
+    "1".into()
+}
+
+pub fn router() -> Router<AppState> {
+    Router::new()
+        // Bulk
+        .route("/cv/bulk", get(get_cv_bulk).put(put_cv_bulk))
+        // Profile
+        .route("/cv/profile", get(get_profile).put(put_profile))
+        // Experiences + tasks
+        .route("/cv/experiences", get(list_experiences).post(create_experience))
+        .route("/cv/experiences/:id", put(update_experience).delete(delete_experience))
+        .route("/cv/experiences/:id/tasks", get(list_tasks).post(add_task))
+        .route("/cv/experiences/:id/tasks/:task_id", delete(delete_task))
+        // Skills
+        .route("/cv/skills", get(list_skills).post(create_skill))
+        .route("/cv/skills/:id", put(update_skill).delete(delete_skill))
+        // Projects + technologies
+        .route("/cv/projects", get(list_projects).post(create_project))
+        .route("/cv/projects/:id", put(update_project).delete(delete_project))
+        .route("/cv/projects/:id/tech", get(list_project_tech).post(add_project_tech))
+        .route("/cv/projects/:id/tech/:tech_id", delete(delete_project_tech))
+}
+
+
+
+/* ============================== BULK ============================== */
+
+async fn get_cv_bulk(State(st): State<AppState>) -> Json<CvData> {
+    let user_id = uid();
+    let profile = get_profile_inner(&st.db, &user_id).await.unwrap_or_default();
+    let experiences = list_experiences_inner(&st.db, &user_id).await.unwrap_or_default();
+    let skills = list_skills_inner(&st.db, &user_id).await.unwrap_or_default();
+    let projects = list_projects_inner(&st.db, &user_id).await.unwrap_or_default();
+    Json(CvData { profile, experiences, skills, projects })
+}
+
+async fn put_cv_bulk(State(st): State<AppState>, Json(cv): Json<CvData>) -> Json<serde_json::Value> {
+    let user_id = uid();
+    // PRAGMATIQUE: pas de transaction pour l’instant.
+    put_profile_inner(&st.db, &user_id, &cv.profile).await.unwrap();
+    replace_experiences_inner(&st.db, &user_id, &cv.experiences).await.unwrap();
+    replace_skills_inner(&st.db, &user_id, &cv.skills).await.unwrap();
+    replace_projects_inner(&st.db, &user_id, &cv.projects).await.unwrap();
+    Json(json!({ "ok": true }))
+}
+
+/* ============================== PROFILE ============================== */
+
+async fn get_profile(State(st): State<AppState>) -> Json<Profile> {
+    let user_id = uid();
+    Json(get_profile_inner(&st.db, &user_id).await.unwrap_or_default())
+}
+
+async fn put_profile(State(st): State<AppState>, Json(p): Json<Profile>) -> Json<serde_json::Value> {
+    let user_id = uid();
+    put_profile_inner(&st.db, &user_id, &p).await.unwrap();
+    Json(json!({ "ok": true }))
+}
+
+async fn get_profile_inner(db: &Pool<Sqlite>, user_id: &str) -> sqlx::Result<Profile> {
+    let rec = sqlx::query!(
+        r#"
+        SELECT first_name, last_name, title, email, phone,
+               address, city, country, website, photo_url
+        FROM profiles WHERE user_id = ?
+        "#,
+        user_id
+    )
+    .fetch_optional(db)
+    .await?;
+
+    if let Some(r) = rec {
+        Ok(Profile {
+            first_name: r.first_name.unwrap_or_default(),
+            last_name: r.last_name.unwrap_or_default(),
+            title: r.title.unwrap_or_default(),
+            email: r.email.unwrap_or_default(),
+            phone: r.phone.unwrap_or_default(),
+            address: r.address.unwrap_or_default(),
+            city: r.city.unwrap_or_default(),
+            country: r.country.unwrap_or_default(),
+            website: r.website.unwrap_or_default(),
+            photo_url: r.photo_url.unwrap_or_default(),
+        })
+    } else {
+        Ok(Profile::default())
+    }
+}
+
+async fn put_profile_inner(db: &Pool<Sqlite>, user_id: &str, p: &Profile) -> sqlx::Result<()> {
+    sqlx::query!(
+        r#"
+        INSERT INTO profiles
+          (user_id, first_name, last_name, title, email, phone,
+           address, city, country, website, photo_url, updated_at)
+        VALUES
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+          first_name = excluded.first_name,
+          last_name  = excluded.last_name,
+          title      = excluded.title,
+          email      = excluded.email,
+          phone      = excluded.phone,
+          address    = excluded.address,
+          city       = excluded.city,
+          country    = excluded.country,
+          website    = excluded.website,
+          photo_url  = excluded.photo_url,
+          updated_at = CURRENT_TIMESTAMP
+        "#,
+        user_id,
+        p.first_name,
+        p.last_name,
+        p.title,
+        p.email,
+        p.phone,
+        p.address,
+        p.city,
+        p.country,
+        p.website,
+        p.photo_url
+    )
+    .execute(db)
+    .await?;
+    Ok(())
+}
+
+/* ============================== EXPERIENCES + TASKS ============================== */
+
+async fn list_experiences(State(st): State<AppState>) -> Json<Vec<Experience>> {
+    let user_id = uid();
+    Json(list_experiences_inner(&st.db, &user_id).await.unwrap_or_default())
+}
+
+async fn create_experience(State(st): State<AppState>, Json(mut e): Json<Experience>) -> Json<Experience> {
+    let user_id = uid();
+    let id = sqlx::query!(
+        r#"
+        INSERT INTO experiences
+          (user_id, date, kind, title, company, location, updated_at)
+        VALUES
+          (?,?,?,?,?,?,CURRENT_TIMESTAMP)
+        "#,
+        user_id,
+        e.date,
+        e.kind,
+        e.title,
+        e.company,
+        e.location
+    )
+    .execute(&st.db)
+    .await
+    .unwrap()
+    .last_insert_rowid();
+
+    e.id = Some(id);
+    Json(e)
+}
+
+async fn update_experience(
+    State(st): State<AppState>,
+    Path(id): Path<i64>,
+    Json(e): Json<Experience>,
+) -> Json<serde_json::Value> {
+    sqlx::query!(
+        r#"
+        UPDATE experiences
+           SET date = ?,
+               kind = ?,
+               title = ?,
+               company = ?,
+               location = ?,
+               updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?
+        "#,
+        e.date,
+        e.kind,
+        e.title,
+        e.company,
+        e.location,
+        id
+    )
+    .execute(&st.db)
+    .await
+    .unwrap();
+
+    Json(json!({ "ok": true }))
+}
+
+async fn delete_experience(State(st): State<AppState>, Path(id): Path<i64>) -> Json<serde_json::Value> {
+    sqlx::query!("DELETE FROM experiences WHERE id = ?", id)
+        .execute(&st.db)
+        .await
+        .unwrap();
+
+    Json(json!({ "ok": true }))
+}
+
+async fn list_tasks(State(st): State<AppState>, Path(id): Path<i64>) -> Json<Vec<String>> {
+    let rows = sqlx::query!(
+        "SELECT task FROM experience_tasks WHERE experience_id = ? ORDER BY id",
+        id
+    )
+    .fetch_all(&st.db)
+    .await
+    .unwrap();
+
+    Json(rows.into_iter().map(|r| r.task).collect())
+}
+
+async fn add_task(
+    State(st): State<AppState>,
+    Path(id): Path<i64>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let task = body.get("task").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+    sqlx::query!(
+        "INSERT INTO experience_tasks (experience_id, task) VALUES (?, ?)",
+        id,
+        task
+    )
+    .execute(&st.db)
+    .await
+    .unwrap();
+
+    Json(json!({ "ok": true }))
+}
+
+async fn delete_task(
+    State(st): State<AppState>,
+    Path((exp_id, task_id)): Path<(i64, i64)>,
+) -> Json<serde_json::Value> {
+    sqlx::query!(
+        "DELETE FROM experience_tasks WHERE experience_id = ? AND id = ?",
+        exp_id,
+        task_id
+    )
+    .execute(&st.db)
+    .await
+    .unwrap();
+
+    Json(json!({ "ok": true }))
+}
+
+async fn list_experiences_inner(db: &Pool<Sqlite>, user_id: &str) -> sqlx::Result<Vec<Experience>> {
+    let rows = sqlx::query!(
+        r#"
+        SELECT id as "id!: i64", date, kind, title, company, location
+          FROM experiences
+         WHERE user_id = ?
+         ORDER BY id
+        "#,
+        user_id
+    )
+    .fetch_all(db)
+    .await?;
+
+    let mut out = Vec::with_capacity(rows.len());
+    for r in rows {
+        let tasks_rows = sqlx::query!(
+            "SELECT task FROM experience_tasks WHERE experience_id = ? ORDER BY id",
+            r.id
+        )
+        .fetch_all(db)
+        .await?;
+
+        out.push(Experience {
+            id: Some(r.id),
+            date: r.date.unwrap_or_default(),
+            kind: r.kind.unwrap_or_default(),
+            title: r.title.unwrap_or_default(),
+            company: r.company.unwrap_or_default(),
+            location: r.location.unwrap_or_default(),
+            tasks: tasks_rows.into_iter().map(|t| t.task).collect(),
+        });
+    }
+    Ok(out)
+}
+
+async fn replace_experiences_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Experience]) -> sqlx::Result<()> {
+    sqlx::query!(
+        "DELETE FROM experience_tasks WHERE experience_id IN (SELECT id FROM experiences WHERE user_id = ?)",
+        user_id
+    )
+    .execute(db)
+    .await?;
+
+    sqlx::query!("DELETE FROM experiences WHERE user_id = ?", user_id)
+        .execute(db)
+        .await?;
+
+    for e in list {
+        let id = sqlx::query!(
+            r#"
+            INSERT INTO experiences
+              (user_id, date, kind, title, company, location, updated_at)
+            VALUES
+              (?,?,?,?,?,?,CURRENT_TIMESTAMP)
+            "#,
+            user_id,
+            e.date,
+            e.kind,
+            e.title,
+            e.company,
+            e.location
+        )
+        .execute(db)
+        .await?
+        .last_insert_rowid();
+
+        for t in &e.tasks {
+            sqlx::query!(
+                "INSERT INTO experience_tasks (experience_id, task) VALUES (?, ?)",
+                id,
+                t
+            )
+            .execute(db)
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+/* ============================== SKILLS ============================== */
+
+async fn list_skills(State(st): State<AppState>) -> Json<Vec<Skill>> {
+    let user_id = uid();
+    Json(list_skills_inner(&st.db, &user_id).await.unwrap_or_default())
+}
+
+async fn create_skill(State(st): State<AppState>, Json(mut sk): Json<Skill>) -> Json<Skill> {
+    let user_id = uid();
+    let id = sqlx::query!(
+        r#"
+        INSERT INTO skills
+          (user_id, name, percentage, logo, category, updated_at)
+        VALUES
+          (?,?,?,?,?,CURRENT_TIMESTAMP)
+        "#,
+        user_id,
+        sk.name,
+        sk.percentage,
+        sk.logo,
+        sk.category
+    )
+    .execute(&st.db)
+    .await
+    .unwrap()
+    .last_insert_rowid();
+
+    sk.id = Some(id);
+    Json(sk)
+}
+
+async fn update_skill(
+    State(st): State<AppState>,
+    Path(id): Path<i64>,
+    Json(sk): Json<Skill>,
+) -> Json<serde_json::Value> {
+    sqlx::query!(
+        r#"
+        UPDATE skills
+           SET name = ?,
+               percentage = ?,
+               logo = ?,
+               category = ?,
+               updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?
+        "#,
+        sk.name,
+        sk.percentage,
+        sk.logo,
+        sk.category,
+        id
+    )
+    .execute(&st.db)
+    .await
+    .unwrap();
+
+    Json(json!({ "ok": true }))
+}
+
+async fn delete_skill(State(st): State<AppState>, Path(id): Path<i64>) -> Json<serde_json::Value> {
+    sqlx::query!("DELETE FROM skills WHERE id = ?", id)
+        .execute(&st.db)
+        .await
+        .unwrap();
+
+    Json(json!({ "ok": true }))
+}
+
+async fn list_skills_inner(db: &Pool<Sqlite>, user_id: &str) -> sqlx::Result<Vec<Skill>> {
+    let rows = sqlx::query!(
+        r#"
+        SELECT id as "id!: i64", name, percentage, logo, category
+          FROM skills
+         WHERE user_id = ?
+         ORDER BY id
+        "#,
+        user_id
+    )
+    .fetch_all(db)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|r| Skill {
+            id: Some(r.id),
+            name: r.name,
+            percentage: r.percentage,
+            logo: r.logo.unwrap_or_default(),
+            category: r.category.unwrap_or_default(),
+        })
+        .collect())
+}
+
+async fn replace_skills_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Skill]) -> sqlx::Result<()> {
+    sqlx::query!("DELETE FROM skills WHERE user_id = ?", user_id)
+        .execute(db)
+        .await?;
+
+    for sk in list {
+        sqlx::query!(
+            r#"
+            INSERT INTO skills
+              (user_id, name, percentage, logo, category, updated_at)
+            VALUES
+              (?,?,?,?,?,CURRENT_TIMESTAMP)
+            "#,
+            user_id,
+            sk.name,
+            sk.percentage,
+            sk.logo,
+            sk.category
+        )
+        .execute(db)
+        .await?;
+    }
+    Ok(())
+}
+
+/* ============================== PROJECTS + TECHNO ============================== */
+
+async fn list_projects(State(st): State<AppState>) -> Json<Vec<Project>> {
+    let user_id = uid();
+    Json(list_projects_inner(&st.db, &user_id).await.unwrap_or_default())
+}
+
+async fn create_project(State(st): State<AppState>, Json(mut p): Json<Project>) -> Json<Project> {
+    let user_id = uid();
+    let id = sqlx::query!(
+        r#"
+        INSERT INTO projects
+          (user_id, title, description, category, repo_link, pdf_link, image, updated_at)
+        VALUES
+          (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)
+        "#,
+        user_id,
+        p.title,
+        p.description,
+        p.category,
+        p.repo_link,
+        p.pdf_link,
+        p.image
+    )
+    .execute(&st.db)
+    .await
+    .unwrap()
+    .last_insert_rowid();
+
+    p.id = Some(id);
+    Json(p)
+}
+
+async fn update_project(
+    State(st): State<AppState>,
+    Path(id): Path<i64>,
+    Json(p): Json<Project>,
+) -> Json<serde_json::Value> {
+    sqlx::query!(
+        r#"
+        UPDATE projects
+           SET title = ?,
+               description = ?,
+               category = ?,
+               repo_link = ?,
+               pdf_link = ?,
+               image = ?,
+               updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?
+        "#,
+        p.title,
+        p.description,
+        p.category,
+        p.repo_link,
+        p.pdf_link,
+        p.image,
+        id
+    )
+    .execute(&st.db)
+    .await
+    .unwrap();
+
+    Json(json!({ "ok": true }))
+}
+
+async fn delete_project(State(st): State<AppState>, Path(id): Path<i64>) -> Json<serde_json::Value> {
+    sqlx::query!("DELETE FROM projects WHERE id = ?", id)
+        .execute(&st.db)
+        .await
+        .unwrap();
+
+    Json(json!({ "ok": true }))
+}
+
+async fn list_project_tech(State(st): State<AppState>, Path(id): Path<i64>) -> Json<Vec<String>> {
+    let rows = sqlx::query!(
+        "SELECT tech FROM project_technologies WHERE project_id = ? ORDER BY id",
+        id
+    )
+    .fetch_all(&st.db)
+    .await
+    .unwrap();
+
+    Json(rows.into_iter().map(|r| r.tech).collect())
+}
+
+async fn add_project_tech(
+    State(st): State<AppState>,
+    Path(id): Path<i64>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let tech = body.get("tech").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+    sqlx::query!(
+        "INSERT INTO project_technologies (project_id, tech) VALUES (?, ?)",
+        id,
+        tech
+    )
+    .execute(&st.db)
+    .await
+    .unwrap();
+
+    Json(json!({ "ok": true }))
+}
+
+async fn delete_project_tech(
+    State(st): State<AppState>,
+    Path((id, tech_id)): Path<(i64, i64)>,
+) -> Json<serde_json::Value> {
+    sqlx::query!(
+        "DELETE FROM project_technologies WHERE project_id = ? AND id = ?",
+        id,
+        tech_id
+    )
+    .execute(&st.db)
+    .await
+    .unwrap();
+
+    Json(json!({ "ok": true }))
+}
+
+async fn list_projects_inner(db: &Pool<Sqlite>, user_id: &str) -> sqlx::Result<Vec<Project>> {
+    let rows = sqlx::query!(
+        r#"
+        SELECT id as "id!: i64", title, description, category, repo_link, pdf_link, image
+          FROM projects
+         WHERE user_id = ?
+         ORDER BY id
+        "#,
+        user_id
+    )
+    .fetch_all(db)
+    .await?;
+
+    let mut out = Vec::with_capacity(rows.len());
+    for r in rows {
+        let tech = sqlx::query!(
+            "SELECT tech FROM project_technologies WHERE project_id = ? ORDER BY id",
+            r.id
+        )
+        .fetch_all(db)
+        .await?;
+
+        out.push(Project {
+            id: Some(r.id),
+            title: r.title,
+            description: r.description.unwrap_or_default(),
+            category: r.category.unwrap_or_default(),
+            repo_link: r.repo_link.unwrap_or_default(),
+            pdf_link: r.pdf_link.unwrap_or_default(),
+            image: r.image.unwrap_or_default(),
+            technologies: tech.into_iter().map(|t| t.tech).collect(),
+        });
+    }
+    Ok(out)
+}
+
+async fn replace_projects_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Project]) -> sqlx::Result<()> {
+    let pids = sqlx::query!(
+        r#"SELECT id as "id!: i64" FROM projects WHERE user_id = ?"#,
+        user_id
+    )
+    .fetch_all(db)
+    .await?;
+
+    for r in pids {
+        sqlx::query!(
+            "DELETE FROM project_technologies WHERE project_id = ?",
+            r.id
+        )
+        .execute(db)
+        .await?;
+    }
+
+    sqlx::query!("DELETE FROM projects WHERE user_id = ?", user_id)
+        .execute(db)
+        .await?;
+
+    for p in list {
+        let id = sqlx::query!(
+            r#"
+            INSERT INTO projects
+              (user_id, title, description, category, repo_link, pdf_link, image, updated_at)
+            VALUES
+              (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)
+            "#,
+            user_id,
+            p.title,
+            p.description,
+            p.category,
+            p.repo_link,
+            p.pdf_link,
+            p.image
+        )
+        .execute(db)
+        .await?
+        .last_insert_rowid();
+
+        for t in &p.technologies {
+            sqlx::query!(
+                "INSERT INTO project_technologies (project_id, tech) VALUES (?, ?)",
+                id,
+                t
+            )
+            .execute(db)
+            .await?;
+        }
+    }
+    Ok(())
+}
