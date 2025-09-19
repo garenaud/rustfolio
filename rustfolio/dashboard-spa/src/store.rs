@@ -2,7 +2,21 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use yewdux::prelude::*;
 
-// --------- Domain data ----------
+// ---- Domain data ----
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug)]
+pub struct Profile {
+    pub first_name: String,
+    pub last_name: String,
+    pub title: String,
+    pub email: String,
+    pub phone: String,
+    pub address: String,
+    pub city: String,
+    pub country: String,
+    pub website: String,
+    pub photo_url: String,
+}
+
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug)]
 pub struct Experience {
     pub date: String,
@@ -27,42 +41,45 @@ pub struct Project {
     pub title: String,
     pub description: String,
     pub category: String,
-    pub technologies: Vec<String>,
-    pub repoLink: String,
-    pub pdfLink: String,
+    #[serde(rename="repoLink")] pub repo_link: String,
+    #[serde(rename="pdfLink")]  pub pdf_link:  String,
     pub image: String,
+    pub technologies: Vec<String>,
 }
 
-// --------- Builder layout ----------
+// ---- Builder layout ----
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug)]
 pub struct Layout { pub rows: Vec<Row> }
-
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug)]
 pub struct Row { pub columns: Vec<Column> }
-
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug)]
 pub struct Column { pub widgets: Vec<Widget> }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum Widget {
-    Title { text: String, level: u8 },
+    Title { text: String, level: u8, #[serde(default)] bold: bool, #[serde(default)] align: Option<String> },
     ExperienceList { filter_type: Option<String> },
     SkillsGrid { category: Option<String> },
     ProjectCard { index: usize },
     Photo { url: String, rounded: bool },
 }
 impl Default for Widget {
-    fn default() -> Self { Self::Title { text: "Titre".into(), level: 1 } }
+    fn default() -> Self { Self::Title { text: "Titre".into(), level: 1, bold: false, align: None } }
 }
 
-// --------- App state & store ----------
+// ---- App state & store ----
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug)]
 pub struct AppState {
+    pub profile: Profile,
     pub experiences: Vec<Experience>,
     pub skills: Vec<Skill>,
     pub projects: Vec<Project>,
     pub layout: Layout,
+
+    // UI/transient
+    pub selected_slot: Option<(usize, usize)>,
+    pub selected_widget: Option<(usize, usize, usize)>,
 }
 
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug, Store)]
@@ -70,7 +87,7 @@ pub struct AppStore {
     pub state: AppState,
 }
 
-// --------- JSON helpers utilisés par le Builder ----------
+// ---- Helpers JSON (layout + data) ----
 impl AppState {
     pub fn layout_from_json(&mut self, json: &Value) {
         if let Some(rows) = json.get("rows") {
@@ -88,7 +105,9 @@ impl AppState {
                                             "Title" => {
                                                 let text = w.get("text").and_then(|v| v.as_str()).unwrap_or("Titre").to_string();
                                                 let level = w.get("level").and_then(|v| v.as_u64()).unwrap_or(1) as u8;
-                                                col.widgets.push(Widget::Title { text, level });
+                                                let bold = w.get("bold").and_then(|v| v.as_bool()).unwrap_or(false);
+                                                let align = w.get("align").and_then(|v| v.as_str()).map(|s| s.to_string());
+                                                col.widgets.push(Widget::Title { text, level, bold, align });
                                             }
                                             "ExperienceList" => {
                                                 let filter_type = w.get("filter_type").and_then(|v| v.as_str()).map(|s| s.to_string());
@@ -127,8 +146,8 @@ impl AppState {
             let columns: Vec<Value> = row.columns.iter().map(|col| {
                 let widgets: Vec<Value> = col.widgets.iter().map(|w| {
                     match w {
-                        Widget::Title { text, level } => serde_json::json!({
-                            "type": "Title", "text": text, "level": level
+                        Widget::Title { text, level, bold, align } => serde_json::json!({
+                            "type": "Title", "text": text, "level": level, "bold": bold, "align": align
                         }),
                         Widget::ExperienceList { filter_type } => serde_json::json!({
                             "type": "ExperienceList", "filter_type": filter_type
@@ -150,5 +169,20 @@ impl AppState {
         }).collect();
 
         serde_json::json!({ "rows": rows })
+    }
+
+    pub fn from_cv_json(&mut self, json: &serde_json::Value) {
+        if let Some(p)  = json.get("profile")     { self.profile     = serde_json::from_value(p.clone()).unwrap_or_default(); }
+        if let Some(e)  = json.get("experiences") { self.experiences = serde_json::from_value(e.clone()).unwrap_or_default(); }
+        if let Some(s)  = json.get("skills")      { self.skills      = serde_json::from_value(s.clone()).unwrap_or_default(); }
+        if let Some(pj) = json.get("projects")    { self.projects    = serde_json::from_value(pj.clone()).unwrap_or_default(); }
+    }
+    pub fn to_cv_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "profile": &self.profile,
+            "experiences": &self.experiences,
+            "skills": &self.skills,
+            "projects": &self.projects
+        })
     }
 }

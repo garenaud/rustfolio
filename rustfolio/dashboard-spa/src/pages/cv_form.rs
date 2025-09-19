@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use gloo_net::http::Request;
 use serde_json::Value;
-use crate::store::{AppStore, Row, Column, Widget};
+//use crate::store::{AppStore, Row, Column, Widget};
 
 #[function_component(CvFormPage)]
 pub fn cv_form() -> Html {

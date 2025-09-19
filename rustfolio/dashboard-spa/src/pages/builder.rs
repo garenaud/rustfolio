@@ -46,7 +46,7 @@ pub fn builder_page() -> Html {
             dispatch.reduce_mut(|s| {
                 if let Some(last_row) = s.state.layout.rows.last_mut() {
                     if let Some(first_col) = last_row.columns.first_mut() {
-                        first_col.widgets.push(Widget::Title { text: "Mon CV".into(), level: 1 });
+                        first_col.widgets.push(Widget::Title { text: "Mon CV".into(), level: 1, bold: false, align: None });
                     }
                 }
             });
@@ -101,7 +101,7 @@ fn render_col(col: &Column) -> Html {
 
 fn render_widget(w: &Widget) -> Html {
     match w {
-        Widget::Title { text, level } => html!{ <h1>{format!("H{}: {}", level, text)}</h1> },
+        Widget::Title { text, level, .. } => html!{ <h1>{format!("H{}: {}", level, text)}</h1> },
         Widget::ExperienceList { .. } => html!{ <div>{"[Expériences]"}</div> },
         Widget::SkillsGrid { .. } => html!{ <div>{"[Skills]"}</div> },
         Widget::ProjectCard { index } => html!{ <div>{format!("[Projet #{index}]")}</div> },

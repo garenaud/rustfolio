@@ -1,2 +1,2 @@
-pub mod nav;
-pub use nav::Nav; // => crate::components::Nav fonctionne
+//! Reusable UI components live here.
+//! (Empty for now — add submodules when you actually create files in `src/components/`.)

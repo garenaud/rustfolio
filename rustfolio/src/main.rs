@@ -2,6 +2,7 @@ mod data;
 mod state;
 mod templates;
 mod middleware;
+mod types;
 mod routes {
     pub mod pages;
     pub mod api;
@@ -9,6 +10,7 @@ mod routes {
     pub mod auth;
     pub mod profile;
     pub mod cv; 
+    pub mod cv_normalized;
 }
 
 use std::{net::SocketAddr, sync::Arc};
@@ -35,6 +37,11 @@ async fn main() {
     let db = SqlitePool::connect(&db_url)
         .await
         .expect("failed to connect DB");
+    sqlx::query("PRAGMA foreign_keys = ON;")
+        .execute(&db)
+        .await
+        .expect("enable FKs");
+
 
     let state = AppState {
         db,
@@ -59,6 +66,7 @@ async fn main() {
         .nest("/auth", auth::router())
         .nest("/api", profile::router())
         .nest("/api", routes::cv::router()) 
+        .nest("/api", routes::cv_normalized::router())
         .merge(assets_router)
         .merge(dashboard_router)
         .with_state(state);
