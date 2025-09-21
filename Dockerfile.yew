@@ -12,4 +12,4 @@ WORKDIR /work/rustfolio/dashboard-spa
 
 # Regénère en continu vers /assets/dashboard
 # (Trunk utilisera le Trunk.toml présent dans ce dossier)
-CMD ["trunk","watch", "--release", "--dist","/assets/dashboard","--public-url","/assets/dashboard/","--filehash=false","-v","--address","0.0.0.0"]
+CMD ["trunk","serve","--release","--dist","/assets/dashboard","--public-url","/assets/dashboard/","--filehash=false","--address","0.0.0.0","--port","8081","-v"]

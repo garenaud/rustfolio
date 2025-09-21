@@ -2,8 +2,8 @@
 dist = "/assets/dashboard"
 public_url = "/assets/dashboard/"
 filehash = false
-release = true
 
-[tools]
-wasm_opt = false
-wasm_bindgen = "0.2.103"
+[serve]
+address = "0.0.0.0"
+port = 8081
+open = false
