@@ -5,4 +5,5 @@ filehash = false
 release = true
 
 [tools]
-wasm_bindgen = "0.2.92"
+wasm_opt = false
+wasm_bindgen = "0.2.103"

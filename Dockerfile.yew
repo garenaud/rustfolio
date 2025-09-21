@@ -5,11 +5,11 @@ RUN rustup target add wasm32-unknown-unknown \
  && cargo install trunk --version 0.21.4 --locked \
  && rm -rf /root/.cache/trunk
 
-# Le binaire trunk sera dans /usr/local/cargo/bin
 ENV PATH="/usr/local/cargo/bin:${PATH}"
 
-# Dossier de travail = code du SPA monté par le volume compose
-WORKDIR /work
+# >>> IMPORTANT : on se place DANS le dossier du SPA
+WORKDIR /work/rustfolio/dashboard-spa
 
-# Par défaut, on lance un watch qui sort tout vers /assets/dashboard
-CMD ["trunk","watch", "--release", "--dist","/assets/dashboard", "--public-url","/assets/dashboard/", "--filehash=false", "-v"]
+# Regénère en continu vers /assets/dashboard
+# (Trunk utilisera le Trunk.toml présent dans ce dossier)
+CMD ["trunk","watch", "--release", "--dist","/assets/dashboard","--public-url","/assets/dashboard/","--filehash=false","-v","--address","0.0.0.0"]
