@@ -9,6 +9,26 @@ use sqlx::{Pool, Sqlite};
 use crate::state::AppState;
 use crate::types::{CvData, Experience, Profile, Project, Skill};
 
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct ProfileDto {
+    pub first_name: Option<String>,
+    pub last_name:  Option<String>,
+    pub title:      Option<String>,
+    pub email:      Option<String>,
+    pub phone:      Option<String>,
+    // Le front n'a pas forcément tout : on garde ces champs optionnels
+    pub address:    Option<String>,
+    pub city:       Option<String>,
+    pub country:    Option<String>,
+    pub website:    Option<String>,
+    pub photo_url:  Option<String>,
+    // Si tu utilisais "location" côté front, on l’ignore ici ou tu peux
+    // décider de le mapper vers address/city/country selon ta logique.
+}
+
 fn uid() -> String {
     "1".into()
 }
@@ -33,8 +53,6 @@ pub fn router() -> Router<AppState> {
         .route("/cv/projects/:id/tech", get(list_project_tech).post(add_project_tech))
         .route("/cv/projects/:id/tech/:tech_id", delete(delete_project_tech))
 }
-
-
 
 /* ============================== BULK ============================== */
 
@@ -64,10 +82,33 @@ async fn get_profile(State(st): State<AppState>) -> Json<Profile> {
     Json(get_profile_inner(&st.db, &user_id).await.unwrap_or_default())
 }
 
-async fn put_profile(State(st): State<AppState>, Json(p): Json<Profile>) -> Json<serde_json::Value> {
+// ⬇️ ICI: on accepte un PATCH partiel (ProfileDto), on merge, on upsert
+async fn put_profile(
+    State(st): State<AppState>,
+    Json(patch): Json<ProfileDto>
+) -> Json<serde_json::Value> {
     let user_id = uid();
-    put_profile_inner(&st.db, &user_id, &p).await.unwrap();
+
+    let current = get_profile_inner(&st.db, &user_id).await.unwrap_or_default();
+    let merged = merge_profile(current, patch);
+
+    put_profile_inner(&st.db, &user_id, &merged).await.unwrap();
     Json(json!({ "ok": true }))
+}
+
+fn merge_profile(curr: Profile, patch: ProfileDto) -> Profile {
+    Profile {
+        first_name: patch.first_name.unwrap_or(curr.first_name),
+        last_name:  patch.last_name.unwrap_or(curr.last_name),
+        title:      patch.title.unwrap_or(curr.title),
+        email:      patch.email.unwrap_or(curr.email),
+        phone:      patch.phone.unwrap_or(curr.phone),
+        address:    patch.address.unwrap_or(curr.address),
+        city:       patch.city.unwrap_or(curr.city),
+        country:    patch.country.unwrap_or(curr.country),
+        website:    patch.website.unwrap_or(curr.website),
+        photo_url:  patch.photo_url.unwrap_or(curr.photo_url),
+    }
 }
 
 async fn get_profile_inner(db: &Pool<Sqlite>, user_id: &str) -> sqlx::Result<Profile> {

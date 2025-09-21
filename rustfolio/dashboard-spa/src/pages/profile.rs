@@ -1,53 +1,59 @@
 use yew::prelude::*;
 use yew::events::InputEvent;
-use yew::TargetCast;
-
 use gloo::net::http::Request;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{HtmlInputElement, HtmlTextAreaElement};
+use web_sys::{HtmlInputElement, HtmlTextAreaElement, RequestCredentials};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
-struct Profile {
-    first_name: String,
-    last_name: String,
-    title: String,
-    email: String,
-    phone: String,
-    location: String,
-    about: String,
-    website: Option<String>,
-    github: Option<String>,
-    linkedin: Option<String>,
-    twitter: Option<String>,
-    picture: Option<String>,
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[serde(default)]
+struct ProfileForm {
+    first_name: Option<String>,
+    last_name:  Option<String>,
+    title:      Option<String>,
+    email:      Option<String>,
+    phone:      Option<String>,
+    location:   Option<String>,
+    bio:        Option<String>,
 }
 
-#[function_component(ProfilePage)]
-pub fn profile_page() -> Html {
-    let data    = use_state(Profile::default);
+impl ProfileForm {
+    fn get_s(&self, v: &Option<String>) -> String {
+        v.clone().unwrap_or_default()
+    }
+    fn set_s(v: &mut Option<String>, s: String) {
+        if s.is_empty() { *v = None; } else { *v = Some(s); }
+    }
+}
+
+#[function_component(Profile)]
+pub fn profile() -> Html {
+    let data    = use_state(ProfileForm::default);
     let loading = use_state(|| false);
     let saving  = use_state(|| false);
     let error   = use_state(|| Option::<String>::None);
     let ok_msg  = use_state(|| Option::<String>::None);
 
-    // charge au mount: GET /api/cv/profile
+    // Chargement initial
     {
-        let data = data.clone();
         let loading = loading.clone();
-        let error = error.clone();
-
-        use_effect_with((), move |_| {
+        let error   = error.clone();
+        let data    = data.clone();
+        use_effect_with_deps(move |_| {
             spawn_local(async move {
                 loading.set(true);
                 error.set(None);
 
-                let resp = Request::get("/api/cv/profile").send().await;
+                let resp = Request::get("/api/profile")
+                    .credentials(RequestCredentials::Include)
+                    .send()
+                    .await;
+
                 match resp {
-                    Ok(r) if r.ok() => match r.json::<Profile>().await {
-                        Ok(p) => data.set(p),
-                        Err(e) => error.set(Some(format!("JSON error: {e}"))),
+                    Ok(r) if r.ok() => match r.json::<ProfileForm>().await {
+                        Ok(json) => data.set(json),
+                        Err(e)   => error.set(Some(format!("JSON error: {e}"))),
                     },
                     Ok(r) => error.set(Some(format!("HTTP {}", r.status()))),
                     Err(e) => error.set(Some(format!("Network error: {e}"))),
@@ -56,57 +62,57 @@ pub fn profile_page() -> Html {
                 loading.set(false);
             });
             || ()
-        });
+        }, ());
     }
 
-    // helpers d’update contrôlé
-    let update_text = |f: fn(&mut Profile, String)| {
+    // Helpers pour oninput
+    let set_input = |mut updater: Box<dyn FnMut(&mut ProfileForm, String)>| {
         let data = data.clone();
         Callback::from(move |e: InputEvent| {
             let input: HtmlInputElement = e.target_unchecked_into();
             let mut v = (*data).clone();
-            f(&mut v, input.value());
+            updater.as_mut()(&mut v, input.value());
             data.set(v);
         })
     };
-    let update_textarea = |f: fn(&mut Profile, String)| {
+    let set_textarea = |mut updater: Box<dyn FnMut(&mut ProfileForm, String)>| {
         let data = data.clone();
         Callback::from(move |e: InputEvent| {
             let input: HtmlTextAreaElement = e.target_unchecked_into();
             let mut v = (*data).clone();
-            f(&mut v, input.value());
-            data.set(v);
-        })
-    };
-    let update_opt = |f: fn(&mut Profile, Option<String>)| {
-        let data = data.clone();
-        Callback::from(move |e: InputEvent| {
-            let input: HtmlInputElement = e.target_unchecked_into();
-            let mut v = (*data).clone();
-            let val = input.value();
-            f(&mut v, if val.trim().is_empty() { None } else { Some(val) });
+            updater.as_mut()(&mut v, input.value());
             data.set(v);
         })
     };
 
-    // PUT /api/cv/profile (remplacement complet)
+    let on_first_name = set_input(Box::new(|s, val| ProfileForm::set_s(&mut s.first_name, val)));
+    let on_last_name  = set_input(Box::new(|s, val| ProfileForm::set_s(&mut s.last_name , val)));
+    let on_title      = set_input(Box::new(|s, val| ProfileForm::set_s(&mut s.title     , val)));
+    let on_email      = set_input(Box::new(|s, val| ProfileForm::set_s(&mut s.email     , val)));
+    let on_phone      = set_input(Box::new(|s, val| ProfileForm::set_s(&mut s.phone     , val)));
+    let on_location   = set_input(Box::new(|s, val| ProfileForm::set_s(&mut s.location  , val)));
+    let on_bio        = set_textarea(Box::new(|s, val| ProfileForm::set_s(&mut s.bio    , val)));
+
+    // POST /api/profile
     let save = {
-        let data = data.clone();
         let saving = saving.clone();
-        let error = error.clone();
+        let error  = error.clone();
         let ok_msg = ok_msg.clone();
+        let body   = (*data).clone();
         Callback::from(move |_| {
-            let body = (*data).clone();
             let saving = saving.clone();
-            let error = error.clone();
+            let error  = error.clone();
             let ok_msg = ok_msg.clone();
+            let body   = body.clone();
+
             spawn_local(async move {
                 saving.set(true);
                 error.set(None);
                 ok_msg.set(None);
 
-                let resp = Request::put("/api/cv/profile")
+                let resp = Request::post("/api/profile")
                     .header("Content-Type", "application/json")
+                    .credentials(RequestCredentials::Include)
                     .json(&body).unwrap()
                     .send()
                     .await;
@@ -123,66 +129,29 @@ pub fn profile_page() -> Html {
     };
 
     html! {
-        <div class="p-4 space-y-4">
-            <h2 class="text-2xl font-bold">{"Profile"}</h2>
+        <div class="container">
+            <h2>{ "Profile" }</h2>
 
             if let Some(err) = (*error).clone() {
-                <p class="text-red-600">{err}</p>
+                <p class="error">{ err }</p>
             }
             if let Some(ok) = (*ok_msg).clone() {
-                <p class="text-green-600">{ok}</p>
+                <p class="ok">{ ok }</p>
             }
 
-            <fieldset class="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-3xl" disabled={*loading || *saving}>
-                <input class="border p-2 rounded" type="text" placeholder="First name"
-                    value={(*data).first_name.clone()}
-                    oninput={update_text(|p,v| p.first_name = v)} />
-                <input class="border p-2 rounded" type="text" placeholder="Last name"
-                    value={(*data).last_name.clone()}
-                    oninput={update_text(|p,v| p.last_name = v)} />
-                <input class="border p-2 rounded" type="text" placeholder="Title"
-                    value={(*data).title.clone()}
-                    oninput={update_text(|p,v| p.title = v)} />
-                <input class="border p-2 rounded" type="email" placeholder="Email"
-                    value={(*data).email.clone()}
-                    oninput={update_text(|p,v| p.email = v)} />
-                <input class="border p-2 rounded" type="text" placeholder="Phone"
-                    value={(*data).phone.clone()}
-                    oninput={update_text(|p,v| p.phone = v)} />
-                <input class="border p-2 rounded" type="text" placeholder="Location"
-                    value={(*data).location.clone()}
-                    oninput={update_text(|p,v| p.location = v)} />
-
-                <textarea class="border p-2 rounded col-span-full" rows={6} placeholder="About"
-                    value={(*data).about.clone()}
-                    oninput={update_textarea(|p,v| p.about = v)} />
-
-                <input class="border p-2 rounded" type="text" placeholder="Website"
-                    value={(*data).website.clone().unwrap_or_default()}
-                    oninput={update_opt(|p,v| p.website = v)} />
-                <input class="border p-2 rounded" type="text" placeholder="GitHub"
-                    value={(*data).github.clone().unwrap_or_default()}
-                    oninput={update_opt(|p,v| p.github = v)} />
-                <input class="border p-2 rounded" type="text" placeholder="LinkedIn"
-                    value={(*data).linkedin.clone().unwrap_or_default()}
-                    oninput={update_opt(|p,v| p.linkedin = v)} />
-                <input class="border p-2 rounded" type="text" placeholder="Twitter"
-                    value={(*data).twitter.clone().unwrap_or_default()}
-                    oninput={update_opt(|p,v| p.twitter = v)} />
-                <input class="border p-2 rounded" type="text" placeholder="Picture URL"
-                    value={(*data).picture.clone().unwrap_or_default()}
-                    oninput={update_opt(|p,v| p.picture = v)} />
-            </fieldset>
-
-            <div class="pt-2">
-                <button class="border px-3 py-2 rounded"
-                    onclick={save}
-                    disabled={*saving}>
-                    { if *saving { "Saving..." } else { "Save" } }
-                </button>
-                { " " }
-                { if *loading { html!{ <span>{"Loading profile..."}</span> } } else { html!{} } }
+            <div class="form-grid">
+                <input type="text"  placeholder="First name" value={data.get_s(&data.first_name)} oninput={on_first_name}/>
+                <input type="text"  placeholder="Last name"  value={data.get_s(&data.last_name)}  oninput={on_last_name}/>
+                <input type="text"  placeholder="Title"      value={data.get_s(&data.title)}      oninput={on_title}/>
+                <input type="email" placeholder="Email"      value={data.get_s(&data.email)}      oninput={on_email}/>
+                <input type="tel"   placeholder="Phone"      value={data.get_s(&data.phone)}      oninput={on_phone}/>
+                <input type="text"  placeholder="Location"   value={data.get_s(&data.location)}   oninput={on_location}/>
+                <textarea rows={6}   placeholder="Bio"        value={data.get_s(&data.bio)}        oninput={on_bio}/>
             </div>
+
+            <button onclick={save} disabled={*saving}>
+                { if *saving { "Saving..." } else { "Save" } }
+            </button>
         </div>
     }
 }
