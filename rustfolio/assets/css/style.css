@@ -251,3 +251,140 @@
   color: var(--text);
   background: var(--surface);
 }
+
+/* --- Dashboard / Profile form layout --- */
+.dash-section {
+  padding: 16px 20px;
+}
+
+.dash-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.dash-error { color: #ff6b6b; margin: 8px 0 12px; }
+.dash-ok    { color: #3ddc97; margin: 8px 0 12px; }
+
+/* grid responsive : passe automatiquement sur plusieurs lignes */
+.dash-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  max-width: 1200px;       /* évite le débordement horizontal */
+  width: 100%;
+}
+
+/* champs */
+.dash-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: #fff;
+  color: #111;
+  box-sizing: border-box;
+}
+
+.dash-textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+
+.dash-btn {
+  margin-top: 14px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.dash-btn[disabled] { opacity: .6; cursor: not-allowed; }
+
+/* coupe tout scroll horizontal parasite */
+body, html, #app, main { overflow-x: hidden; }
+
+.subnav {
+  font-size: 0.95rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.15);
+  backdrop-filter: blur(4px);
+}
+.subnav a { padding: 10px 12px; display: inline-block; }
+
+.cv-section { padding: 16px; max-width: 1100px; margin: 0 auto; }
+.cv-section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.error { color:#ff6b6b; margin:8px 0; }
+
+.card { background: #0e1523; border: 1px solid #25304a; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+.exp-card input { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid #2b3959; background:#fff; color:#111; }
+
+.grid { display:grid; gap: 10px; }
+.grid-exp {
+  grid-template-columns: repeat(5, minmax(180px, 1fr));
+}
+@media (max-width: 1100px) {
+  .grid-exp { grid-template-columns: repeat(3, minmax(160px, 1fr)); }
+}
+@media (max-width: 700px) {
+  .grid-exp { grid-template-columns: 1fr; }
+}
+
+.tasks { margin-top: 12px; }
+.tasks-list { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+.task-item { display:flex; justify-content:space-between; align-items:center; background:#0a1020; border:1px solid #25304a; border-radius:6px; padding:8px 10px; }
+.icon-btn { border:none; background:transparent; cursor:pointer; }
+
+.task-new { display:flex; gap: 8px; }
+.task-new input { flex: 1; }
+
+.actions { margin-top: 12px; display:flex; gap:8px; }
+
+.btn { padding:8px 12px; border-radius:8px; border:1px solid #2b3959; background:#121b2f; color:#e6ebff; cursor:pointer; }
+.btn.primary { background:#1c2b4d; }
+.btn:disabled { opacity:.6; cursor:default; }
+
+/* sous-section sous le profil */
+.dash-subsection { margin-top: 24px; }
+
+/* liste & carte */
+.exp-list { display: grid; gap: 16px; }
+.exp-card {
+  padding: 12px;
+  border-radius: 12px;
+  background: #111827; /* gris très sombre */
+  border: 1px solid #1f2937;
+}
+
+/* grille des champs d'une expérience */
+.exp-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+/* zone tasks */
+.tasks { margin-top: 8px; }
+.tasks-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.tasks-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.task-item { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+
+/* actions */
+.exp-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+
+/* boutons / inputs (reprend ton style) */
+.dash-input { width: 100%; min-height: 40px; }
+.dash-btn { padding: 8px 12px; border-radius: 8px; }
+.dash-btn-danger { background: #7f1d1d; }
+
+.dash-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)); /* ou 2 colonnes selon la largeur */
+  gap: 1rem;
+}
+.dash-input, .dash-textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
