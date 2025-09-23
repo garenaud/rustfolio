@@ -20,22 +20,18 @@ pub struct Profile {
 /* =================== EXPERIENCE =================== */
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(default)]
 pub struct Experience {
     pub id: Option<i64>,
-
-    pub date: String,
-
     pub date_start: String,
-    pub date_end:   String,
-    pub kind:       String, // emploi, mission, stage, formation, bénévolat…
-    pub title:      String,
-    pub company:    String,
-    pub location:   String,
-    pub website:    String,
-
+    pub date_end: String,
+    pub kind: String,
+    pub title: String,
+    pub company: String,
+    pub location: String,
+    pub website: String,
     pub tasks: Vec<String>,
 }
+
 
 /* =================== SKILL =================== */
 

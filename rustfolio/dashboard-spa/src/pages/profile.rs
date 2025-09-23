@@ -179,7 +179,6 @@ pub fn profile() -> Html {
             </button>
         </section>
 
-        // La section expériences vit sous le profil
         <ExperiencesSection />
         </>
     }
@@ -196,7 +195,6 @@ struct TaskItem {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 struct ExperienceData {
     id: Option<i64>,
-    date: String,
     date_start: String,
     date_end: String,
     kind: String,
@@ -204,14 +202,14 @@ struct ExperienceData {
     company: String,
     location: String,
     website: String,
-    #[serde(skip_serializing)]
+
+    #[serde(default, skip_deserializing)]
     tasks: Vec<TaskItem>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 struct ExperiencePayload {
     id: Option<i64>,
-    date: String,
     date_start: String,
     date_end: String,
     kind: String,
@@ -219,14 +217,14 @@ struct ExperiencePayload {
     company: String,
     location: String,
     website: String,
-    tasks: Vec<String>,
+    tasks: Vec<String>, 
 }
 
+// conversion front -> payload
 impl From<&ExperienceData> for ExperiencePayload {
     fn from(e: &ExperienceData) -> Self {
         Self {
             id: e.id,
-            date: e.date.clone(),
             date_start: e.date_start.clone(),
             date_end: e.date_end.clone(),
             kind: e.kind.clone(),
@@ -238,6 +236,7 @@ impl From<&ExperienceData> for ExperiencePayload {
         }
     }
 }
+
 
 #[function_component(ExperiencesSection)]
 fn experiences_section() -> Html {
@@ -312,14 +311,13 @@ fn experiences_section() -> Html {
             let loading = loading.clone();
 
             let payload = ExperiencePayload {
-                date: "".into(),
                 date_start: "".into(),
-                date_end: "".into(),
-                kind: "".into(),
-                title: "".into(),
-                company: "".into(),
-                location: "".into(),
-                website: "".into(),
+                date_end:   "".into(),
+                kind:       "".into(),
+                title:      "".into(),
+                company:    "".into(),
+                location:   "".into(),
+                website:    "".into(),
                 ..Default::default()
             };
 
@@ -431,16 +429,16 @@ fn experiences_section() -> Html {
             let mut v = (*list).clone();
             if let Some(item) = v.iter_mut().find(|e| e.id == Some(id)) {
                 match field {
-                    "date"       => item.date = value,
                     "date_start" => item.date_start = value,
-                    "date_end"   => item.date_end = value,
-                    "kind"       => item.kind = value,
-                    "title"      => item.title = value,
-                    "company"    => item.company = value,
-                    "location"   => item.location = value,
-                    "website"    => item.website = value,
+                    "date_end"   => item.date_end   = value,
+                    "kind"       => item.kind       = value,
+                    "title"      => item.title      = value,
+                    "company"    => item.company    = value,
+                    "location"   => item.location   = value,
+                    "website"    => item.website    = value,
                     _ => {}
                 }
+
             }
             list.set(v);
         })
@@ -572,7 +570,6 @@ fn exp_item(props: &ExpItemProps) -> Html {
         }
     };
 
-    let on_date       = on_input_factory("date");
     let on_date_start = on_input_factory("date_start");
     let on_date_end   = on_input_factory("date_end");
     let on_kind       = on_input_factory("kind");
@@ -615,13 +612,12 @@ fn exp_item(props: &ExpItemProps) -> Html {
     html! {
         <div class="exp-card">
             <div class="exp-grid">
-                <input class="dash-input" type="text" placeholder="Date (legacy)" value={exp.date} oninput={on_date} />
-                <input class="dash-input" type="text" placeholder="Start (YYYY-MM)" value={exp.date_start} oninput={on_date_start} />
-                <input class="dash-input" type="text" placeholder="End (YYYY-MM)" value={exp.date_end} oninput={on_date_end} />
-                <input class="dash-input" type="text" placeholder="Kind" value={exp.kind} oninput={on_kind} />
-                <input class="dash-input" type="text" placeholder="Title" value={exp.title} oninput={on_title} />
+                <input class="dash-input" type="text" placeholder="Start (YYYY[-MM[-DD]])" value={exp.date_start} oninput={on_date_start} />
+                <input class="dash-input" type="text" placeholder="End (YYYY[-MM[-DD]])"   value={exp.date_end}   oninput={on_date_end} />
+                <input class="dash-input" type="text" placeholder="Kind"    value={exp.kind}    oninput={on_kind} />
+                <input class="dash-input" type="text" placeholder="Title"   value={exp.title}   oninput={on_title} />
                 <input class="dash-input" type="text" placeholder="Company" value={exp.company} oninput={on_company} />
-                <input class="dash-input" type="text" placeholder="Location" value={exp.location} oninput={on_location} />
+                <input class="dash-input" type="text" placeholder="Location" value={exp.location}oninput={on_location} />
                 <input class="dash-input" type="url"  placeholder="Website" value={exp.website} oninput={on_website} />
             </div>
 

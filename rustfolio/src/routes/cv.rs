@@ -1,7 +1,7 @@
-use axum::{extract::State, routing::{get, put}, Json, Router};
+use axum::{extract::State, routing::get, Json, Router};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::{Sqlite, Pool};
+use sqlx::SqlitePool;
 
 use crate::state::AppState;
 
