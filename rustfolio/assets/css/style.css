@@ -251,3 +251,64 @@
   color: var(--text);
   background: var(--surface);
 }
+
+/* --- Dashboard / Profile form layout --- */
+.dash-section {
+  padding: 16px 20px;
+}
+
+.dash-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.dash-error { color: #ff6b6b; margin: 8px 0 12px; }
+.dash-ok    { color: #3ddc97; margin: 8px 0 12px; }
+
+/* grid responsive : passe automatiquement sur plusieurs lignes */
+.dash-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  max-width: 1200px;       /* évite le débordement horizontal */
+  width: 100%;
+}
+
+/* champs */
+.dash-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: #fff;
+  color: #111;
+  box-sizing: border-box;
+}
+
+.dash-textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+
+.dash-btn {
+  margin-top: 14px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.dash-btn[disabled] { opacity: .6; cursor: not-allowed; }
+
+/* coupe tout scroll horizontal parasite */
+body, html, #app, main { overflow-x: hidden; }
+
+.subnav {
+  font-size: 0.95rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.15);
+  backdrop-filter: blur(4px);
+}
+.subnav a { padding: 10px 12px; display: inline-block; }
