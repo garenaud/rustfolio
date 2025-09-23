@@ -11,6 +11,8 @@ use crate::types::{CvData, Experience, Profile, Project, Skill};
 
 use serde::{Deserialize, Serialize};
 
+/* ============================== DTOs ============================== */
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct ProfileDto {
@@ -19,17 +21,24 @@ pub struct ProfileDto {
     pub title:      Option<String>,
     pub email:      Option<String>,
     pub phone:      Option<String>,
-    // Le front n'a pas forcément tout : on garde ces champs optionnels
+    // Champs d'adresse optionnels (le front peut ne pas tous les envoyer)
     pub address:    Option<String>,
     pub city:       Option<String>,
     pub country:    Option<String>,
     pub website:    Option<String>,
     pub photo_url:  Option<String>,
-    // Si tu utilisais "location" côté front, on l’ignore ici ou tu peux
-    // décider de le mapper vers address/city/country selon ta logique.
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskDto {
+    pub id: i64,
+    pub task: String,
+}
+
+/* ============================== Router ============================== */
+
 fn uid() -> String {
+    // TODO: brancher au vrai user
     "1".into()
 }
 
@@ -67,7 +76,7 @@ async fn get_cv_bulk(State(st): State<AppState>) -> Json<CvData> {
 
 async fn put_cv_bulk(State(st): State<AppState>, Json(cv): Json<CvData>) -> Json<serde_json::Value> {
     let user_id = uid();
-    // PRAGMATIQUE: pas de transaction pour l’instant.
+    // PRAG: pas de transaction pour l’instant.
     put_profile_inner(&st.db, &user_id, &cv.profile).await.unwrap();
     replace_experiences_inner(&st.db, &user_id, &cv.experiences).await.unwrap();
     replace_skills_inner(&st.db, &user_id, &cv.skills).await.unwrap();
@@ -82,16 +91,14 @@ async fn get_profile(State(st): State<AppState>) -> Json<Profile> {
     Json(get_profile_inner(&st.db, &user_id).await.unwrap_or_default())
 }
 
-// ⬇️ ICI: on accepte un PATCH partiel (ProfileDto), on merge, on upsert
+// PATCH-like: accepte un DTO partiel, merge, puis upsert
 async fn put_profile(
     State(st): State<AppState>,
     Json(patch): Json<ProfileDto>
 ) -> Json<serde_json::Value> {
     let user_id = uid();
-
     let current = get_profile_inner(&st.db, &user_id).await.unwrap_or_default();
     let merged = merge_profile(current, patch);
-
     put_profile_inner(&st.db, &user_id, &merged).await.unwrap();
     Json(json!({ "ok": true }))
 }
@@ -116,7 +123,8 @@ async fn get_profile_inner(db: &Pool<Sqlite>, user_id: &str) -> sqlx::Result<Pro
         r#"
         SELECT first_name, last_name, title, email, phone,
                address, city, country, website, photo_url
-        FROM profiles WHERE user_id = ?
+          FROM profiles
+         WHERE user_id = ?
         "#,
         user_id
     )
@@ -126,15 +134,15 @@ async fn get_profile_inner(db: &Pool<Sqlite>, user_id: &str) -> sqlx::Result<Pro
     if let Some(r) = rec {
         Ok(Profile {
             first_name: r.first_name.unwrap_or_default(),
-            last_name: r.last_name.unwrap_or_default(),
-            title: r.title.unwrap_or_default(),
-            email: r.email.unwrap_or_default(),
-            phone: r.phone.unwrap_or_default(),
-            address: r.address.unwrap_or_default(),
-            city: r.city.unwrap_or_default(),
-            country: r.country.unwrap_or_default(),
-            website: r.website.unwrap_or_default(),
-            photo_url: r.photo_url.unwrap_or_default(),
+            last_name:  r.last_name.unwrap_or_default(),
+            title:      r.title.unwrap_or_default(),
+            email:      r.email.unwrap_or_default(),
+            phone:      r.phone.unwrap_or_default(),
+            address:    r.address.unwrap_or_default(),
+            city:       r.city.unwrap_or_default(),
+            country:    r.country.unwrap_or_default(),
+            website:    r.website.unwrap_or_default(),
+            photo_url:  r.photo_url.unwrap_or_default(),
         })
     } else {
         Ok(Profile::default())
@@ -163,16 +171,8 @@ async fn put_profile_inner(db: &Pool<Sqlite>, user_id: &str, p: &Profile) -> sql
           updated_at = CURRENT_TIMESTAMP
         "#,
         user_id,
-        p.first_name,
-        p.last_name,
-        p.title,
-        p.email,
-        p.phone,
-        p.address,
-        p.city,
-        p.country,
-        p.website,
-        p.photo_url
+        p.first_name, p.last_name, p.title, p.email, p.phone,
+        p.address, p.city, p.country, p.website, p.photo_url,
     )
     .execute(db)
     .await?;
@@ -242,6 +242,12 @@ async fn update_experience(
 }
 
 async fn delete_experience(State(st): State<AppState>, Path(id): Path<i64>) -> Json<serde_json::Value> {
+    // Nettoyer les tasks si pas de FK ON DELETE CASCADE
+    sqlx::query!("DELETE FROM experience_tasks WHERE experience_id = ?", id)
+        .execute(&st.db)
+        .await
+        .unwrap();
+
     sqlx::query!("DELETE FROM experiences WHERE id = ?", id)
         .execute(&st.db)
         .await
@@ -250,35 +256,33 @@ async fn delete_experience(State(st): State<AppState>, Path(id): Path<i64>) -> J
     Json(json!({ "ok": true }))
 }
 
-async fn list_tasks(State(st): State<AppState>, Path(id): Path<i64>) -> Json<Vec<String>> {
+#[derive(Serialize, Deserialize)]
+struct TaskItem { id: i64, task: String }
+
+async fn list_tasks(State(st): State<AppState>, Path(id): Path<i64>) -> Json<Vec<TaskItem>> {
     let rows = sqlx::query!(
-        "SELECT task FROM experience_tasks WHERE experience_id = ? ORDER BY id",
+        r#"SELECT id as "id!: i64", task FROM experience_tasks WHERE experience_id = ? ORDER BY id"#,
         id
     )
-    .fetch_all(&st.db)
-    .await
-    .unwrap();
+    .fetch_all(&st.db).await.unwrap();
 
-    Json(rows.into_iter().map(|r| r.task).collect())
+    Json(rows.into_iter().map(|r| TaskItem { id: r.id, task: r.task }).collect())
 }
 
 async fn add_task(
     State(st): State<AppState>,
     Path(id): Path<i64>,
     Json(body): Json<serde_json::Value>,
-) -> Json<serde_json::Value> {
+) -> Json<TaskItem> {
     let task = body.get("task").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
-    sqlx::query!(
-        "INSERT INTO experience_tasks (experience_id, task) VALUES (?, ?)",
-        id,
-        task
+    let inserted_id = sqlx::query!(
+        r#"INSERT INTO experience_tasks (experience_id, task) VALUES (?, ?)"#,
+        id, task
     )
-    .execute(&st.db)
-    .await
-    .unwrap();
+    .execute(&st.db).await.unwrap().last_insert_rowid();
 
-    Json(json!({ "ok": true }))
+    Json(TaskItem { id: inserted_id, task })
 }
 
 async fn delete_task(
@@ -326,6 +330,7 @@ async fn list_experiences_inner(db: &Pool<Sqlite>, user_id: &str) -> sqlx::Resul
             title: r.title.unwrap_or_default(),
             company: r.company.unwrap_or_default(),
             location: r.location.unwrap_or_default(),
+            // Le type `Experience` (côté types) expose un Vec<String> -> on garde juste le texte ici
             tasks: tasks_rows.into_iter().map(|t| t.task).collect(),
         });
     }
