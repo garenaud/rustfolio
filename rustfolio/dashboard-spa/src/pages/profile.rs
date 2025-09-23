@@ -1,16 +1,15 @@
-use std::rc::Rc;
-
-use gloo::net::http::Request;
-use serde::{Deserialize, Serialize};
-use wasm_bindgen_futures::spawn_local;
-use web_sys::{HtmlInputElement, HtmlTextAreaElement, RequestCredentials};
-use yew::events::InputEvent;
 use yew::prelude::*;
+use yew::events::InputEvent;
 use yew::TargetCast;
 
-/* =========================================================================
-   MODELES - PROFIL
-   ========================================================================= */
+use gloo::net::http::Request;
+use wasm_bindgen_futures::spawn_local;
+use web_sys::{HtmlInputElement, HtmlTextAreaElement, RequestCredentials};
+
+use serde::{Serialize, Deserialize};
+use std::rc::Rc;
+
+/* ===================== PROFILE ===================== */
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 #[serde(default)]
@@ -26,14 +25,9 @@ struct ProfileData {
     website:    String,
     photo_url:  String,
 
-    // laissé si jamais tu l’utilises plus tard côté front
     #[serde(skip_serializing_if = "Option::is_none")]
-    location: Option<String>,
+    location: Option<String>, // compat ancien front
 }
-
-/* =========================================================================
-   COMPOSANT - PROFIL
-   ========================================================================= */
 
 #[function_component(Profile)]
 pub fn profile() -> Html {
@@ -43,7 +37,7 @@ pub fn profile() -> Html {
     let error   = use_state(|| Option::<String>::None);
     let ok      = use_state(|| false);
 
-    // Chargement initial
+    // fetch au montage
     {
         let loading = loading.clone();
         let error   = error.clone();
@@ -52,7 +46,6 @@ pub fn profile() -> Html {
             spawn_local(async move {
                 loading.set(true);
                 error.set(None);
-
                 let resp = Request::get("/api/cv/profile")
                     .credentials(RequestCredentials::Include)
                     .send()
@@ -75,7 +68,6 @@ pub fn profile() -> Html {
         });
     }
 
-    // Usines d'handlers pour inputs
     let update_text = {
         let data = data.clone();
         move |f: fn(&mut ProfileData, String)| {
@@ -88,7 +80,6 @@ pub fn profile() -> Html {
             })
         }
     };
-
     let update_textarea = {
         let data = data.clone();
         move |f: fn(&mut ProfileData, String)| {
@@ -102,7 +93,6 @@ pub fn profile() -> Html {
         }
     };
 
-    // Bindings des champs
     let on_first_name = update_text(|s, v| s.first_name = v);
     let on_last_name  = update_text(|s, v| s.last_name  = v);
     let on_title      = update_text(|s, v| s.title      = v);
@@ -114,7 +104,6 @@ pub fn profile() -> Html {
     let on_website    = update_text(|s, v| s.website    = v);
     let on_photo_url  = update_textarea(|s, v| s.photo_url  = v);
 
-    // SAVE profil (PUT /api/cv/profile)
     let on_save = {
         let saving = saving.clone();
         let error  = error.clone();
@@ -126,16 +115,15 @@ pub fn profile() -> Html {
             let error  = error.clone();
             let ok     = ok.clone();
             let body   = body.clone();
-
             spawn_local(async move {
                 saving.set(true);
                 ok.set(false);
                 error.set(None);
 
                 let resp = Request::put("/api/cv/profile")
+                    .header("Content-Type", "application/json")
                     .credentials(RequestCredentials::Include)
-                    .json(&body)
-                    .expect("json() a échoué")
+                    .json(&body).unwrap()
                     .send()
                     .await;
 
@@ -151,6 +139,7 @@ pub fn profile() -> Html {
     };
 
     html! {
+        <>
         <section class="dash-section">
             <h2 class="dash-title">{ "Profile" }</h2>
 
@@ -189,12 +178,14 @@ pub fn profile() -> Html {
                 { if *saving { "Saving..." } else if *loading { "Loading..." } else { "Save" } }
             </button>
         </section>
+
+        // La section expériences vit sous le profil
+        <ExperiencesSection />
+        </>
     }
 }
 
-/* =========================================================================
-   MODELES - EXPERIENCES & TASKS (front)
-   ========================================================================= */
+/* ===================== EXPERIENCES ===================== */
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 struct TaskItem {
@@ -206,26 +197,28 @@ struct TaskItem {
 struct ExperienceData {
     id: Option<i64>,
     date: String,
+    date_start: String,
+    date_end: String,
     kind: String,
     title: String,
     company: String,
     location: String,
-
+    website: String,
     #[serde(skip_serializing)]
     tasks: Vec<TaskItem>,
 }
-   
 
-// Payload (ce que le back attend sur create/update)
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 struct ExperiencePayload {
     id: Option<i64>,
     date: String,
-    #[serde(rename = "type")]
+    date_start: String,
+    date_end: String,
     kind: String,
     title: String,
     company: String,
     location: String,
+    website: String,
     tasks: Vec<String>,
 }
 
@@ -234,26 +227,26 @@ impl From<&ExperienceData> for ExperiencePayload {
         Self {
             id: e.id,
             date: e.date.clone(),
+            date_start: e.date_start.clone(),
+            date_end: e.date_end.clone(),
             kind: e.kind.clone(),
             title: e.title.clone(),
             company: e.company.clone(),
             location: e.location.clone(),
+            website: e.website.clone(),
             tasks: e.tasks.iter().map(|t| t.task.clone()).collect(),
         }
     }
 }
 
-/* =========================================================================
-   COMPOSANT - EXPERIENCES (parent)
-   ========================================================================= */
-
 #[function_component(ExperiencesSection)]
-pub fn experiences_section() -> Html {
+fn experiences_section() -> Html {
     let list = use_state(|| Vec::<ExperienceData>::new());
     let loading = use_state(|| false);
     let error = use_state(|| Option::<String>::None);
+    let saved_id = use_state(|| Option::<i64>::None); // pour ✅
 
-    // Chargement liste + tâches
+    // charge tout + tasks
     {
         let list = list.clone();
         let loading = loading.clone();
@@ -264,11 +257,9 @@ pub fn experiences_section() -> Html {
                 loading.set(true);
                 error.set(None);
 
-                // 1) liste des expériences
                 let resp = Request::get("/api/cv/experiences")
                     .credentials(RequestCredentials::Include)
-                    .send()
-                    .await;
+                    .send().await;
 
                 match resp {
                     Ok(r) if r.ok() => {
@@ -283,13 +274,11 @@ pub fn experiences_section() -> Html {
                             }
                         };
 
-                        // 2) tasks pour chaque exp (attend que le back renvoie [{id, task}])
                         for e in &mut exps {
                             if let Some(id) = e.id {
                                 if let Ok(resp) = Request::get(&format!("/api/cv/experiences/{id}/tasks"))
                                     .credentials(RequestCredentials::Include)
-                                    .send()
-                                    .await
+                                    .send().await
                                 {
                                     if resp.ok() {
                                         if let Ok(tasks) = resp.json::<Vec<TaskItem>>().await {
@@ -312,7 +301,7 @@ pub fn experiences_section() -> Html {
         });
     }
 
-    // Ajouter une expérience (POST)
+    // créer une expérience vide (POST) puis l’ajouter dans la liste
     let on_add = {
         let list = list.clone();
         let error = error.clone();
@@ -324,10 +313,13 @@ pub fn experiences_section() -> Html {
 
             let payload = ExperiencePayload {
                 date: "".into(),
+                date_start: "".into(),
+                date_end: "".into(),
                 kind: "".into(),
                 title: "".into(),
                 company: "".into(),
                 location: "".into(),
+                website: "".into(),
                 ..Default::default()
             };
 
@@ -336,11 +328,10 @@ pub fn experiences_section() -> Html {
                 error.set(None);
 
                 let resp = Request::post("/api/cv/experiences")
+                    .header("Content-Type", "application/json")
                     .credentials(RequestCredentials::Include)
-                    .json(&payload)
-                    .expect("json() create exp a échoué")
-                    .send()
-                    .await;
+                    .json(&payload).unwrap()
+                    .send().await;
 
                 match resp {
                     Ok(r) if r.ok() => {
@@ -360,7 +351,7 @@ pub fn experiences_section() -> Html {
         })
     };
 
-    // Supprimer une expérience (DELETE)
+    // supprimer
     let on_delete_exp = {
         let list = list.clone();
         let error = error.clone();
@@ -377,13 +368,11 @@ pub fn experiences_section() -> Html {
 
                 let resp = Request::delete(&format!("/api/cv/experiences/{exp_id}"))
                     .credentials(RequestCredentials::Include)
-                    .send()
-                    .await;
+                    .send().await;
 
                 match resp {
                     Ok(r) if r.ok() => {
-                        let v = (*list)
-                            .clone()
+                        let v = (*list).clone()
                             .into_iter()
                             .filter(|e| e.id != Some(exp_id))
                             .collect::<Vec<_>>();
@@ -398,34 +387,36 @@ pub fn experiences_section() -> Html {
         })
     };
 
-    // Sauvegarder une expérience (PUT)
+    // sauver (PUT)
     let on_save_exp = {
         let error = error.clone();
         let loading = loading.clone();
+        let saved_id_state = saved_id.clone();
 
         Callback::from(move |exp: ExperienceData| {
             let error = error.clone();
             let loading = loading.clone();
+            let saved_id_state = saved_id_state.clone();
             let id = exp.id.expect("exp id manquant");
             let payload: ExperiencePayload = (&exp).into();
 
             spawn_local(async move {
                 loading.set(true);
                 error.set(None);
+                saved_id_state.set(None);
 
                 let resp = Request::put(&format!("/api/cv/experiences/{id}"))
+                    .header("Content-Type", "application/json")
                     .credentials(RequestCredentials::Include)
-                    .json(&payload)
-                    .expect("json() update exp a échoué")
-                    .send()
-                    .await;
+                    .json(&payload).unwrap()
+                    .send().await;
 
-                if let Ok(r) = resp {
-                    if !r.ok() {
-                        error.set(Some(format!("HTTP {}", r.status())));
+                match resp {
+                    Ok(r) if r.ok() => {
+                        saved_id_state.set(Some(id)); // ✅
                     }
-                } else if let Err(e) = resp {
-                    error.set(Some(format!("Network error: {e}")));
+                    Ok(r) => error.set(Some(format!("HTTP {}", r.status()))),
+                    Err(e) => error.set(Some(format!("Network error: {e}"))),
                 }
 
                 loading.set(false);
@@ -433,18 +424,21 @@ pub fn experiences_section() -> Html {
         })
     };
 
-    // Modif locale d’un champ
+    // modifs locales
     let on_change_field = {
         let list = list.clone();
         Callback::from(move |(id, field, value): (i64, &'static str, String)| {
             let mut v = (*list).clone();
             if let Some(item) = v.iter_mut().find(|e| e.id == Some(id)) {
                 match field {
-                    "date" => item.date = value,
-                    "kind" => item.kind = value,
-                    "title" => item.title = value,
-                    "company" => item.company = value,
-                    "location" => item.location = value,
+                    "date"       => item.date = value,
+                    "date_start" => item.date_start = value,
+                    "date_end"   => item.date_end = value,
+                    "kind"       => item.kind = value,
+                    "title"      => item.title = value,
+                    "company"    => item.company = value,
+                    "location"   => item.location = value,
+                    "website"    => item.website = value,
                     _ => {}
                 }
             }
@@ -452,7 +446,7 @@ pub fn experiences_section() -> Html {
         })
     };
 
-    // Ajouter une task (POST -> retourne TaskItem)
+    // tasks +
     let on_add_task = {
         let list = list.clone();
         let error = error.clone();
@@ -462,9 +456,9 @@ pub fn experiences_section() -> Html {
 
             spawn_local(async move {
                 let resp = Request::post(&format!("/api/cv/experiences/{exp_id}/tasks"))
+                    .header("Content-Type", "application/json")
                     .credentials(RequestCredentials::Include)
-                    .json(&serde_json::json!({ "task": text }))
-                    .expect("json() add task a échoué")
+                    .json(&serde_json::json!({ "task": text })).unwrap()
                     .send()
                     .await;
 
@@ -485,7 +479,7 @@ pub fn experiences_section() -> Html {
         })
     };
 
-    // Supprimer une task (DELETE)
+    // tasks -
     let on_delete_task = {
         let list = list.clone();
         let error = error.clone();
@@ -497,8 +491,7 @@ pub fn experiences_section() -> Html {
             spawn_local(async move {
                 let resp = Request::delete(&format!("/api/cv/experiences/{exp_id}/tasks/{task_id}"))
                     .credentials(RequestCredentials::Include)
-                    .send()
-                    .await;
+                    .send().await;
 
                 match resp {
                     Ok(r) if r.ok() => {
@@ -516,7 +509,7 @@ pub fn experiences_section() -> Html {
     };
 
     html! {
-        <section class="dash-subsection">
+        <section class="dash-section">
             <h2 class="dash-title">{ "Experiences" }</h2>
 
             if let Some(err) = (*error).clone() {
@@ -529,16 +522,17 @@ pub fn experiences_section() -> Html {
 
             <div class="exp-list">
                 { for (*list).iter().cloned().map(|e| {
-                    let key = e.id.unwrap_or_default().to_string(); // ← clé calculée avant le move
-                    html! {
+                    let key = e.id.unwrap_or_default().to_string();
+                    html!{
                         <ExpItem
                             key={key}
-                            exp={Rc::new(e)}                                // ← move unique ici
+                            exp={Rc::new(e.clone())}
                             on_change_field={on_change_field.clone()}
                             on_save={on_save_exp.clone()}
                             on_delete={on_delete_exp.clone()}
                             on_add_task={on_add_task.clone()}
                             on_delete_task={on_delete_task.clone()}
+                            saved_id={(*saved_id).clone()}
                         />
                     }
                 }) }
@@ -547,9 +541,7 @@ pub fn experiences_section() -> Html {
     }
 }
 
-/* =========================================================================
-   COMPOSANT - Experience item (enfant)
-   ========================================================================= */
+/* ===================== Experience item ===================== */
 
 #[derive(Properties, PartialEq)]
 struct ExpItemProps {
@@ -559,6 +551,7 @@ struct ExpItemProps {
     pub on_delete: Callback<i64>,
     pub on_add_task: Callback<(i64, String)>,
     pub on_delete_task: Callback<(i64, i64)>,
+    pub saved_id: Option<i64>, // ✅
 }
 
 #[function_component(ExpItem)]
@@ -579,11 +572,14 @@ fn exp_item(props: &ExpItemProps) -> Html {
         }
     };
 
-    let on_date = on_input_factory("date");
-    let on_kind = on_input_factory("kind");
-    let on_title = on_input_factory("title");
-    let on_company = on_input_factory("company");
-    let on_location = on_input_factory("location");
+    let on_date       = on_input_factory("date");
+    let on_date_start = on_input_factory("date_start");
+    let on_date_end   = on_input_factory("date_end");
+    let on_kind       = on_input_factory("kind");
+    let on_title      = on_input_factory("title");
+    let on_company    = on_input_factory("company");
+    let on_location   = on_input_factory("location");
+    let on_website    = on_input_factory("website");
 
     let do_save = {
         let on_save = props.on_save.clone();
@@ -619,13 +615,17 @@ fn exp_item(props: &ExpItemProps) -> Html {
     html! {
         <div class="exp-card">
             <div class="exp-grid">
-                <input class="dash-input" type="text" placeholder="Date" value={exp.date} oninput={on_date} />
+                <input class="dash-input" type="text" placeholder="Date (legacy)" value={exp.date} oninput={on_date} />
+                <input class="dash-input" type="text" placeholder="Start (YYYY-MM)" value={exp.date_start} oninput={on_date_start} />
+                <input class="dash-input" type="text" placeholder="End (YYYY-MM)" value={exp.date_end} oninput={on_date_end} />
                 <input class="dash-input" type="text" placeholder="Kind" value={exp.kind} oninput={on_kind} />
                 <input class="dash-input" type="text" placeholder="Title" value={exp.title} oninput={on_title} />
                 <input class="dash-input" type="text" placeholder="Company" value={exp.company} oninput={on_company} />
                 <input class="dash-input" type="text" placeholder="Location" value={exp.location} oninput={on_location} />
+                <input class="dash-input" type="url"  placeholder="Website" value={exp.website} oninput={on_website} />
             </div>
 
+            // tasks
             <div class="tasks">
                 <div class="tasks-row">
                     <input class="dash-input" type="text" placeholder="Add a task…" value={(*new_task).clone()} oninput={on_new_task_input} />
@@ -651,29 +651,11 @@ fn exp_item(props: &ExpItemProps) -> Html {
 
             <div class="exp-actions">
                 <button class="dash-btn" onclick={do_save}>{ "Save experience" }</button>
-                <button class="dash-btn dash-btn-danger" onclick={do_delete}>{ "– Delete" }</button>
+                { if props.saved_id == Some(id) {
+                    html!{ <span class="dash-ok" style="margin-left: .75rem;">{ "Saved ✅" }</span> }
+                } else { html!{} } }
+                <button class="dash-btn dash-btn-danger" onclick={do_delete} style="margin-left: .5rem;">{ "– Delete" }</button>
             </div>
         </div>
-    }
-}
-
-/* =========================================================================
-   WRAPPER DE PAGE
-   ========================================================================= */
-
-#[function_component(ProfilePage)]
-pub fn profile_page() -> Html {
-    html! {
-        <>
-            <section class="dash-section">
-                <h2 class="dash-title">{ "Profile" }</h2>
-                <Profile />
-            </section>
-
-            <section class="dash-section">
-                <h2 class="dash-title">{ "Experiences" }</h2>
-                <ExperiencesSection />
-            </section>
-        </>
     }
 }
