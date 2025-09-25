@@ -220,6 +220,40 @@ struct ExperiencePayload {
     tasks: Vec<String>, 
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct Skill {
+    pub id: i64,
+    pub name: String,
+    pub percentage: Option<u8>,
+    pub logo_url: Option<String>,
+    pub category: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct SkillPayload {
+    pub name: String,
+    pub percentage: Option<u8>,
+    pub logo_url: Option<String>,
+    pub category: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+pub struct SkillOut {
+    pub id: i64,
+    pub name: String,
+    pub percentage: Option<u8>,
+    pub logo_url: Option<String>,
+    pub category: Option<String>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+pub struct SkillIn {
+    pub name: String,
+    pub percentage: Option<u8>,
+    pub logo_url: Option<String>,
+    pub category: Option<String>,
+}
+
 // conversion front -> payload
 impl From<&ExperienceData> for ExperiencePayload {
     fn from(e: &ExperienceData) -> Self {
