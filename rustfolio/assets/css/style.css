@@ -388,3 +388,95 @@ body, html, #app, main { overflow-x: hidden; }
   max-width: 100%;
   box-sizing: border-box;
 }
+
+.skills-filter-row {
+    margin: 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.skill-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.skill-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: contain;
+    background: #f0f0f0;
+}
+
+
+.skill-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.skill-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-right: 0.5rem;
+}
+
+.skill-progress-inner {
+    height: 100%;
+    background: #1976d2;
+    border-radius: 4px;
+    transition: width 0.3s;
+}
+
+.skill-percentage {
+    min-width: 32px;
+    text-align: right;
+    font-size: 0.95rem;
+    color: #555;
+}
+
+.skill-card {
+    background: #f7f7fa; /* gris très léger */
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 120px;
+    position: relative;
+}
+
+.skill-name {
+    font-weight: bold;
+    font-size: 1.15rem;
+    color: #222; /* plus foncé */
+}
+
+.skill-category {
+    font-size: 0.95rem;
+    color: #888;
+    margin-left: 0;
+    margin-bottom: 0.5rem;
+    text-align: left;
+}
+
+.skill-delete-btn {
+    margin-left: 0;
+    margin-top: 0.8rem;
+    align-self: flex-end;
+    font-size: 1rem;
+    padding: 0 0.5rem;
+}

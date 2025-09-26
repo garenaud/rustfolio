@@ -4,7 +4,7 @@ use yew::TargetCast;
 
 use gloo::net::http::Request;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{HtmlInputElement, HtmlTextAreaElement, RequestCredentials};
+use web_sys::{HtmlInputElement, HtmlTextAreaElement, RequestCredentials, HtmlSelectElement};
 
 use serde::{Serialize, Deserialize};
 use std::rc::Rc;
@@ -180,6 +180,7 @@ pub fn profile() -> Html {
         </section>
 
         <ExperiencesSection />
+        <SkillsSection />
         </>
     }
 }
@@ -277,9 +278,8 @@ fn experiences_section() -> Html {
     let list = use_state(|| Vec::<ExperienceData>::new());
     let loading = use_state(|| false);
     let error = use_state(|| Option::<String>::None);
-    let saved_id = use_state(|| Option::<i64>::None); // pour ✅
+    let saved_id = use_state(|| Option::<i64>::None); 
 
-    // charge tout + tasks
     {
         let list = list.clone();
         let loading = loading.clone();
@@ -511,7 +511,6 @@ fn experiences_section() -> Html {
         })
     };
 
-    // tasks -
     let on_delete_task = {
         let list = list.clone();
         let error = error.clone();
@@ -573,7 +572,6 @@ fn experiences_section() -> Html {
     }
 }
 
-/* ===================== Experience item ===================== */
 
 #[derive(Properties, PartialEq)]
 struct ExpItemProps {
@@ -655,7 +653,6 @@ fn exp_item(props: &ExpItemProps) -> Html {
                 <input class="dash-input" type="url"  placeholder="Website" value={exp.website} oninput={on_website} />
             </div>
 
-            // tasks
             <div class="tasks">
                 <div class="tasks-row">
                     <input class="dash-input" type="text" placeholder="Add a task…" value={(*new_task).clone()} oninput={on_new_task_input} />
@@ -687,5 +684,272 @@ fn exp_item(props: &ExpItemProps) -> Html {
                 <button class="dash-btn dash-btn-danger" onclick={do_delete} style="margin-left: .5rem;">{ "– Delete" }</button>
             </div>
         </div>
+    }
+}
+
+
+#[function_component(SkillsSection)]
+fn skills_section() -> Html {
+    let list = use_state(|| Vec::<Skill>::new());
+    let loading = use_state(|| false);
+    let error = use_state(|| Option::<String>::None);
+    let adding = use_state(|| false);
+    let new_skill = use_state(|| SkillPayload {
+        name: "".into(),
+        percentage: None,
+        logo_url: None,
+        category: "".into(),
+    });
+
+    let selected_category = use_state(|| "all".to_string());
+
+    // Charger les skills au montage
+    {
+        let list = list.clone();
+        let loading = loading.clone();
+        let error = error.clone();
+        use_effect_with((), move |_| {
+            spawn_local(async move {
+                loading.set(true);
+                error.set(None);
+
+                let resp = Request::get("/api/cv/skills")
+                    .credentials(RequestCredentials::Include)
+                    .send().await;
+
+                match resp {
+                    Ok(r) if r.ok() => {
+                        match r.json::<Vec<Skill>>().await {
+                            Ok(skills) => list.set(skills),
+                            Err(e) => error.set(Some(format!("JSON error: {e}"))),
+                        }
+                    }
+                    Ok(r) => error.set(Some(format!("HTTP {}", r.status()))),
+                    Err(e) => error.set(Some(format!("Network error: {e}"))),
+                }
+                loading.set(false);
+            });
+            || ()
+        });
+    }
+
+    // Ajout d'un skill
+    let on_add = {
+        let adding = adding.clone();
+        Callback::from(move |_| adding.set(true))
+    };
+
+    let on_cancel = {
+        let adding = adding.clone();
+        Callback::from(move |_| adding.set(false))
+    };
+
+    let on_change = {
+        let new_skill = new_skill.clone();
+        Callback::from(move |(field, value): (&'static str, String)| {
+            let mut s = (*new_skill).clone();
+            match field {
+                "name" => s.name = value,
+                "percentage" => s.percentage = value.parse().ok(),
+                "logo_url" => s.logo_url = if value.is_empty() { None } else { Some(value) },
+                "category" => s.category = value,
+                _ => {}
+            }
+            new_skill.set(s);
+        })
+    };
+
+    let on_save = {
+        let new_skill = new_skill.clone();
+        let list = list.clone();
+        let adding = adding.clone();
+        let error = error.clone();
+        let loading = loading.clone();
+        Callback::from(move |_| {
+            let skill = (*new_skill).clone();
+            let list = list.clone();
+            let adding = adding.clone();
+            let error = error.clone();
+            let loading = loading.clone();
+            spawn_local(async move {
+                loading.set(true);
+                error.set(None);
+
+                let resp = Request::post("/api/cv/skills")
+                    .header("Content-Type", "application/json")
+                    .credentials(RequestCredentials::Include)
+                    .json(&skill).unwrap()
+                    .send().await;
+
+                match resp {
+                    Ok(r) if r.ok() => {
+                        if let Ok(created) = r.json::<Skill>().await {
+                            let mut v = (*list).clone();
+                            v.push(created);
+                            list.set(v);
+                            adding.set(false);
+                        }
+                    }
+                    Ok(r) => error.set(Some(format!("HTTP {}", r.status()))),
+                    Err(e) => error.set(Some(format!("Network error: {e}"))),
+                }
+                loading.set(false);
+            });
+        })
+    };
+
+    // Suppression d'un skill
+    let on_delete_skill = {
+        let list = list.clone();
+        let error = error.clone();
+        let loading = loading.clone();
+        Callback::from(move |id: i64| {
+            let list = list.clone();
+            let error = error.clone();
+            let loading = loading.clone();
+            spawn_local(async move {
+                loading.set(true);
+                error.set(None);
+                let resp = Request::delete(&format!("/api/cv/skills/{id}"))
+                    .credentials(RequestCredentials::Include)
+                    .send().await;
+                match resp {
+                    Ok(r) if r.ok() => {
+                        let v = (*list).clone().into_iter().filter(|s| s.id != id).collect();
+                        list.set(v);
+                    }
+                    Ok(r) => error.set(Some(format!("HTTP {}", r.status()))),
+                    Err(e) => error.set(Some(format!("Network error: {e}"))),
+                }
+                loading.set(false);
+            });
+        })
+    };
+
+    // Filtrer les catégories
+    let categories: Vec<String> = {
+        let mut cats = list.iter()
+            .filter_map(|s| if !s.category.is_empty() { Some(s.category.clone()) } else { None })
+            .collect::<Vec<_>>();
+        cats.sort();
+        cats.dedup();
+        cats
+    };
+
+    let on_category_change = {
+        let selected_category = selected_category.clone();
+        Callback::from(move |e: Event| {
+            let input: HtmlSelectElement = e.target_unchecked_into();
+            selected_category.set(input.value());
+        })
+    };
+
+    let filtered_skills: Vec<Skill> = if *selected_category == "all" {
+        (*list).clone()
+    } else {
+        (*list).clone().into_iter()
+            .filter(|s| s.category == *selected_category)
+            .collect()
+    };
+    html! {
+        <section class="dash-section">
+            <h2 class="dash-title">{ "Skills" }</h2>
+            if let Some(err) = (*error).clone() {
+                <p class="dash-error">{err}</p>
+            }
+            <button class="dash-btn" onclick={on_add} disabled={*loading || *adding}>
+                { if *loading { "..." } else { "+ Add skill" } }
+            </button>
+            if *adding {
+                <div class="skill-form">
+                    <input class="dash-input" type="text" placeholder="Name"
+                        value={new_skill.name.clone()}
+                        oninput={Callback::from({
+                            let on_change = on_change.clone();
+                            move |e: InputEvent| {
+                                let input: HtmlInputElement = e.target_unchecked_into();
+                                on_change.emit(("name", input.value()));
+                            }
+                        })}
+                    />
+                    <input class="dash-input" type="number" min="0" max="100" placeholder="Percentage"
+                        value={new_skill.percentage.map(|p| p.to_string()).unwrap_or_default()}
+                        oninput={Callback::from({
+                            let on_change = on_change.clone();
+                            move |e: InputEvent| {
+                                let input: HtmlInputElement = e.target_unchecked_into();
+                                on_change.emit(("percentage", input.value()));
+                            }
+                        })}
+                    />
+                    <input class="dash-input" type="text" placeholder="Logo URL"
+                        value={new_skill.logo_url.clone().unwrap_or_default()}
+                        oninput={Callback::from({
+                            let on_change = on_change.clone();
+                            move |e: InputEvent| {
+                                let input: HtmlInputElement = e.target_unchecked_into();
+                                on_change.emit(("logo_url", input.value()));
+                            }
+                        })}
+                    />
+                    <input class="dash-input" type="text" placeholder="Category"
+                        value={new_skill.category.clone()}
+                        oninput={Callback::from({
+                            let on_change = on_change.clone();
+                            move |e: InputEvent| {
+                                let input: HtmlInputElement = e.target_unchecked_into();
+                                on_change.emit(("category", input.value()));
+                            }
+                        })}
+                    />
+                    <button class="dash-btn" onclick={on_save} disabled={*loading}>{ "Save skill" }</button>
+                    <button class="dash-btn dash-btn-danger" onclick={on_cancel} disabled={*loading}>{ "Cancel" }</button>
+                </div>
+            }
+            <div class="skills-filter-row">
+                <label for="skills-category">{ "Category: " }</label>
+                <select id="skills-category" class="dash-input" onchange={on_category_change}>
+                    <option value="all">{ "All" }</option>
+                    { for categories.iter().map(|cat| html!{
+                        <option value={cat.clone()}>{cat}</option>
+                    }) }
+                </select>
+            </div>
+            <div class="skills-grid">
+                { for filtered_skills.iter().map(|skill| {
+                    let skill_id = skill.id;
+                    html! {
+                        <div class="skill-card">
+                            <div class="skill-header">
+                                {
+                                    if let Some(logo) = &skill.logo_url {
+                                        html!{ <img class="skill-avatar" src={logo.clone()} alt={skill.name.clone()} /> }
+                                    } else {
+                                        html!{}
+                                    }
+                                }
+                                <span class="skill-name" style="color:#222;">{ &skill.name }</span>
+                            </div>
+                            <div class="skill-category" style="margin-bottom:0.5rem;text-align:left;">
+                                { &skill.category }
+                            </div>
+                            <div class="skill-progress-row">
+                                <div class="skill-progress-bar">
+                                    <div class="skill-progress-inner"
+                                        style={format!("width: {}%;", skill.percentage.unwrap_or(0))}>
+                                    </div>
+                                </div>
+                                <span class="skill-percentage">{ format!("{}%", skill.percentage.unwrap_or(0)) }</span>
+                            </div>
+                            <button class="dash-btn dash-btn-danger skill-delete-btn"
+                                style="margin-top:0.8rem;align-self:flex-end;"
+                                onclick={let on_delete_skill = on_delete_skill.clone(); Callback::from(move |_| on_delete_skill.emit(skill_id))}>
+                                { "– Supprimer" }
+                            </button>
+                        </div>
+                    }
+                })}
+            </div>
+        </section>
     }
 }

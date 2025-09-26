@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    routing::{get, put}, // pas d'import `post` ici
+    routing::{get, put},
     Json, Router,
 };
 use crate::state::AppState;
@@ -60,7 +60,6 @@ async fn create_skill(
     auth: crate::auth::AuthUser,
     Json(s): Json<SkillIn>,
 ) -> HandlerResult<Json<SkillOut>> {
-    // éviter le temporaire dans les args SQLx
     let perc_i64 = s.percentage.map(|p| i64::from(p));
 
     let res = sqlx::query!(
@@ -113,7 +112,6 @@ async fn update_skill(
     Path(id): Path<i64>,
     Json(s): Json<SkillIn>,
 ) -> HandlerResult<Json<SkillOut>> {
-    // éviter le temporaire dans les args SQLx
     let perc_i64 = s.percentage.map(|p| i64::from(p));
 
     sqlx::query!(
