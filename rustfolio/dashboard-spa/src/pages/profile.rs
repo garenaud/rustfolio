@@ -278,9 +278,8 @@ fn experiences_section() -> Html {
     let list = use_state(|| Vec::<ExperienceData>::new());
     let loading = use_state(|| false);
     let error = use_state(|| Option::<String>::None);
-    let saved_id = use_state(|| Option::<i64>::None); // pour ✅
+    let saved_id = use_state(|| Option::<i64>::None); 
 
-    // charge tout + tasks
     {
         let list = list.clone();
         let loading = loading.clone();
@@ -852,7 +851,6 @@ fn skills_section() -> Html {
             .filter(|s| s.category == *selected_category)
             .collect()
     };
-
     html! {
         <section class="dash-section">
             <h2 class="dash-title">{ "Skills" }</h2>
@@ -918,32 +916,38 @@ fn skills_section() -> Html {
                 </select>
             </div>
             <div class="skills-grid">
-                { for filtered_skills.iter().map(|skill| html!{
-                    <div class="skill-card">
-                        <div class="skill-header">
-                            {
-                                if let Some(logo) = &skill.logo_url {
-                                    html!{ <img class="skill-avatar" src={logo.clone()} alt={skill.name.clone()} /> }
-                                } else {
-                                    html!{}
+                { for filtered_skills.iter().map(|skill| {
+                    let skill_id = skill.id;
+                    html! {
+                        <div class="skill-card">
+                            <div class="skill-header">
+                                {
+                                    if let Some(logo) = &skill.logo_url {
+                                        html!{ <img class="skill-avatar" src={logo.clone()} alt={skill.name.clone()} /> }
+                                    } else {
+                                        html!{}
+                                    }
                                 }
-                            }
-                            <span class="skill-name">{ &skill.name }</span>
-                            <span class="skill-category">{ &skill.category }</span>
+                                <span class="skill-name" style="color:#222;">{ &skill.name }</span>
+                            </div>
+                            <div class="skill-category" style="margin-bottom:0.5rem;text-align:left;">
+                                { &skill.category }
+                            </div>
+                            <div class="skill-progress-row">
+                                <div class="skill-progress-bar">
+                                    <div class="skill-progress-inner"
+                                        style={format!("width: {}%;", skill.percentage.unwrap_or(0))}>
+                                    </div>
+                                </div>
+                                <span class="skill-percentage">{ format!("{}%", skill.percentage.unwrap_or(0)) }</span>
+                            </div>
                             <button class="dash-btn dash-btn-danger skill-delete-btn"
-                                onclick={let on_delete_skill = on_delete_skill.clone(); Callback::from(move |_| on_delete_skill.emit(skill.id))}>
-                                { "–" }
+                                style="margin-top:0.8rem;align-self:flex-end;"
+                                onclick={let on_delete_skill = on_delete_skill.clone(); Callback::from(move |_| on_delete_skill.emit(skill_id))}>
+                                { "– Supprimer" }
                             </button>
                         </div>
-                        <div class="skill-progress-row">
-                            <div class="skill-progress-bar">
-                                <div class="skill-progress-inner"
-                                    style={format!("width: {}%;", skill.percentage.unwrap_or(0))}>
-                                </div>
-                            </div>
-                            <span class="skill-percentage">{ format!("{}%", skill.percentage.unwrap_or(0)) }</span>
-                        </div>
-                    </div>
+                    }
                 })}
             </div>
         </section>
