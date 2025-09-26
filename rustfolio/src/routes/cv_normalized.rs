@@ -1,8 +1,8 @@
 use axum::{
     extract::{Path, State},
-    routing::{delete, get, put},
     Json, Router,
 };
+use axum::routing::{get, put, post, delete};
 use serde_json::json;
 use sqlx::{Pool, Sqlite};
 
@@ -10,6 +10,9 @@ use crate::state::AppState;
 use crate::types::{CvData, Experience, Profile, Project, Skill};
 
 use serde::{Deserialize, Serialize};
+use axum::http::StatusCode;
+
+type HandlerResult<T> = std::result::Result<T, (StatusCode, String)>;
 
 /* =============================================================================
    DTOs & helpers
@@ -52,19 +55,12 @@ fn normalize_date_like(s: &str) -> String {
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        // Bulk
         .route("/cv/bulk", get(get_cv_bulk).put(put_cv_bulk))
-        // Profile
         .route("/cv/profile", get(get_profile).put(put_profile))
-        // Experiences + tasks
         .route("/cv/experiences", get(list_experiences).post(create_experience))
         .route("/cv/experiences/:id", put(update_experience).delete(delete_experience))
         .route("/cv/experiences/:id/tasks", get(list_tasks).post(add_task))
         .route("/cv/experiences/:id/tasks/:task_id", delete(delete_task))
-        // Skills
-        .route("/cv/skills", get(list_skills).post(create_skill))
-        .route("/cv/skills/:id", put(update_skill).delete(delete_skill))
-        // Projects + technologies
         .route("/cv/projects", get(list_projects).post(create_project))
         .route("/cv/projects/:id", put(update_project).delete(delete_project))
         .route("/cv/projects/:id/tech", get(list_project_tech).post(add_project_tech))
@@ -217,7 +213,8 @@ async fn create_experience(State(st): State<AppState>, Json(mut e): Json<Experie
 
     let date_start = normalize_date_like(&e.date_start);
     let date_end = normalize_date_like(&e.date_end);
-    let id = sqlx::query!(
+
+    let res = sqlx::query!(
         r#"
         INSERT INTO experiences
           (user_id, date_start, date_end, kind, title, company, location, website, updated_at)
@@ -235,8 +232,8 @@ async fn create_experience(State(st): State<AppState>, Json(mut e): Json<Experie
     )
     .execute(&st.db)
     .await
-    .unwrap()
-    .last_insert_rowid();
+    .unwrap();
+    let id = res.last_insert_rowid();
 
     e.id = Some(id);
     // tasks seront ajoutées via l’endpoint dédié
@@ -318,15 +315,15 @@ async fn add_task(
 ) -> Json<TaskItem> {
     let task = body.get("task").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
 
-    let new_id = sqlx::query!(
+    let res = sqlx::query!(
         "INSERT INTO experience_tasks (experience_id, task) VALUES (?, ?)",
         id,
         task
     )
     .execute(&st.db)
     .await
-    .unwrap()
-    .last_insert_rowid();
+    .unwrap();
+    let new_id = res.last_insert_rowid();
 
     Json(TaskItem { id: new_id, task })
 }
@@ -412,7 +409,7 @@ async fn replace_experiences_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Exp
         let date_start = normalize_date_like(&e.date_start);
         let date_end = normalize_date_like(&e.date_end);
 
-        let id = sqlx::query!(
+        let res = sqlx::query!(
             r#"
             INSERT INTO experiences
             (user_id, date_start, date_end, kind, title, company, location, website, updated_at)
@@ -429,8 +426,8 @@ async fn replace_experiences_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Exp
             e.website
         )
         .execute(db)
-        .await?
-        .last_insert_rowid();
+        .await?;
+        let id = res.last_insert_rowid();
 
         for t in &e.tasks {
             sqlx::query!(
@@ -443,82 +440,6 @@ async fn replace_experiences_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Exp
         }
     }
     Ok(())
-}
-
-/* =============================================================================
-   SKILLS
-============================================================================= */
-
-async fn list_skills(State(st): State<AppState>) -> Json<Vec<Skill>> {
-    let user_id = uid();
-    Json(list_skills_inner(&st.db, &user_id).await.unwrap_or_default())
-}
-
-async fn create_skill(State(st): State<AppState>, Json(mut sk): Json<Skill>) -> Json<Skill> {
-    let user_id = uid();
-
-    // DB INTEGER -> on pousse un i64
-    let perc_i64 = sk.percentage as i64;
-
-    let id = sqlx::query!(
-        r#"
-        INSERT INTO skills
-          (user_id, name, percentage, logo, category, updated_at)
-        VALUES
-          (?,?,?,?,?,CURRENT_TIMESTAMP)
-        "#,
-        user_id,
-        sk.name,
-        perc_i64,
-        sk.logo,
-        sk.category
-    )
-    .execute(&st.db)
-    .await
-    .unwrap()
-    .last_insert_rowid();
-
-    sk.id = Some(id);
-    Json(sk)
-}
-
-async fn update_skill(
-    State(st): State<AppState>,
-    Path(id): Path<i64>,
-    Json(sk): Json<Skill>,
-) -> Json<serde_json::Value> {
-    let perc_i64 = sk.percentage as i64;
-
-    sqlx::query!(
-        r#"
-        UPDATE skills
-           SET name = ?,
-               percentage = ?,
-               logo = ?,
-               category = ?,
-               updated_at = CURRENT_TIMESTAMP
-         WHERE id = ?
-        "#,
-        sk.name,
-        perc_i64,
-        sk.logo,
-        sk.category,
-        id
-    )
-    .execute(&st.db)
-    .await
-    .unwrap();
-
-    Json(json!({ "ok": true }))
-}
-
-async fn delete_skill(State(st): State<AppState>, Path(id): Path<i64>) -> Json<serde_json::Value> {
-    sqlx::query!("DELETE FROM skills WHERE id = ?", id)
-        .execute(&st.db)
-        .await
-        .unwrap();
-
-    Json(json!({ "ok": true }))
 }
 
 async fn list_skills_inner(db: &Pool<Sqlite>, user_id: &str) -> sqlx::Result<Vec<Skill>> {
@@ -583,7 +504,7 @@ async fn list_projects(State(st): State<AppState>) -> Json<Vec<Project>> {
 
 async fn create_project(State(st): State<AppState>, Json(mut p): Json<Project>) -> Json<Project> {
     let user_id = uid();
-    let id = sqlx::query!(
+    let res = sqlx::query!(
         r#"
         INSERT INTO projects
           (user_id, title, description, category, repo_link, pdf_link, image, updated_at)
@@ -600,8 +521,8 @@ async fn create_project(State(st): State<AppState>, Json(mut p): Json<Project>) 
     )
     .execute(&st.db)
     .await
-    .unwrap()
-    .last_insert_rowid();
+    .unwrap();
+    let id = res.last_insert_rowid();
 
     p.id = Some(id);
     Json(p)
@@ -776,7 +697,7 @@ async fn replace_projects_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Projec
         .await?;
 
     for p in list {
-        let id = sqlx::query!(
+        let res = sqlx::query!(
             r#"
             INSERT INTO projects
               (user_id, title, description, category, repo_link, pdf_link, image, updated_at)
@@ -792,8 +713,8 @@ async fn replace_projects_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Projec
             p.image
         )
         .execute(db)
-        .await?
-        .last_insert_rowid();
+        .await?;
+        let id = res.last_insert_rowid();
 
         for t in &p.technologies {
             sqlx::query!(
@@ -806,4 +727,153 @@ async fn replace_projects_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Projec
         }
     }
     Ok(())
+}
+
+/* pub fn mount_skills_routes(state: AppState) -> Router {
+    Router::new()
+        .route("/api/cv/skills", get(list_skills).post(create_skill))
+        .with_state(state.clone())
+        .route("/api/cv/skills/:id", put(update_skill).delete(delete_skill))
+        .route("/api/cv/skills/categories", get(list_skill_categories))
+        .with_state(state)
+} */
+
+async fn list_skills(
+    State(db): State<&sqlx::SqlitePool>,
+    auth: crate::auth::AuthUser,
+) -> HandlerResult<Json<Vec<crate::types::SkillOut>>> {
+    let rows = sqlx::query!(
+        r#"
+        SELECT id, name, percentage, logo_url, category
+        FROM skills
+        WHERE user_id = ?
+        ORDER BY id DESC
+        "#,
+        auth.id
+    )
+    .fetch_all(db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let out = rows
+        .into_iter()
+        .map(|r| crate::types::SkillOut {
+            id: r.id.unwrap_or_default(),
+            name: r.name,
+            // percentage est Option<i64> si SQLite → map vers Option<u8>
+            percentage: u8::try_from(r.percentage).ok(),
+            logo_url: r.logo_url,
+            category: r.category.unwrap_or_default(),
+        })
+        .collect();
+
+    Ok(Json(out))
+}
+
+async fn create_skill(
+    State(db): State<&sqlx::SqlitePool>,
+    auth: crate::auth::AuthUser,
+    Json(s): Json<crate::types::SkillIn>,
+) -> HandlerResult<Json<crate::types::SkillOut>> {
+    // TEMP avant l'appel SQL (évite le .map(...) dans les args)
+    let perc_i64 = s.percentage.map(|p| p as i64);
+
+    let res = sqlx::query!(
+        r#"
+        INSERT INTO skills (user_id, name, percentage, logo_url, category, updated_at)
+        VALUES (?,?,?,?,?, CURRENT_TIMESTAMP)
+        "#,
+        auth.id,
+        s.name,
+        perc_i64,
+        s.logo_url,
+        s.category
+    )
+    .execute(db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let id = res.last_insert_rowid();
+
+    Ok(Json(crate::types::SkillOut {
+        id,
+        name: s.name,
+        percentage: s.percentage,
+        logo_url: s.logo_url,
+        category: s.category,
+    }))
+}
+
+async fn update_skill(
+    State(db): State<&sqlx::SqlitePool>,
+    auth: crate::auth::AuthUser,
+    Path(id): Path<i64>,
+    Json(s): Json<crate::types::SkillIn>,
+) -> Result<Json<crate::types::SkillOut>, (StatusCode, String)> {
+    // TEMP avant l'appel SQL (évite le .map(...) dans les args)
+    let perc_i64 = s.percentage.map(|p| p as i64);
+
+    // sécurité: ne mettre à jour que la ligne de l'utilisateur
+    sqlx::query!(
+        r#"
+        UPDATE skills
+        SET name = ?, percentage = ?, logo_url = ?, category = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND user_id = ?
+        "#,
+        s.name,
+        perc_i64,
+        s.logo_url,
+        s.category,
+        id,
+        auth.id
+    )
+    .execute(db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(crate::types::SkillOut {
+        id,
+        name: s.name,
+        percentage: s.percentage,
+        logo_url: s.logo_url,
+        category: s.category,
+    }))
+}
+
+async fn delete_skill(
+    State(db): State<&sqlx::SqlitePool>,
+    auth: crate::auth::AuthUser,
+    Path(id): Path<i64>,
+) -> HandlerResult<()>  {
+    sqlx::query!(
+        r#"
+        DELETE FROM skills
+        WHERE id = ? AND user_id = ?
+        "#,
+        id,
+        auth.id
+    )
+    .execute(db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(())
+}
+
+async fn list_skill_categories(
+    State(db): State<&sqlx::SqlitePool>,
+    auth: crate::auth::AuthUser,
+) -> HandlerResult<Json<Vec<String>>> {
+    let rows = sqlx::query!(
+        r#"
+        SELECT DISTINCT category
+        FROM skills
+        WHERE user_id = ?
+        ORDER BY category COLLATE NOCASE
+        "#,
+        auth.id
+    )
+    .fetch_all(db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(rows.into_iter().map(|r| r.category.unwrap_or_default()).collect()))
 }

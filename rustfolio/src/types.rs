@@ -70,3 +70,22 @@ pub struct CvData {
     pub skills:      Vec<Skill>,
     pub projects:    Vec<Project>,
 }
+
+/* =================== SKILL IN/OUT (API) =================== */
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SkillIn {
+    pub name: String,
+    pub percentage: Option<u8>,   // optionnel
+    pub logo_url: Option<String>, // optionnel
+    pub category: String,         // libre, mais on proposera des suggestions
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SkillOut {
+    pub id: i64,
+    pub name: String,
+    pub percentage: Option<u8>,
+    pub logo_url: Option<String>,
+    pub category: String,
+}

@@ -11,6 +11,7 @@ mod routes {
     pub mod profile;
     pub mod cv; 
     pub mod cv_normalized;
+    pub mod skills;
 }
 
 use std::{net::SocketAddr, sync::Arc};
@@ -27,10 +28,11 @@ use tower_http::services::ServeDir;
 use crate::middleware::require_auth;
 use crate::routes::{api, auth, health, pages, profile};
 use crate::state::AppState;
+use crate::routes::skills;
+use crate::routes::cv_normalized;
 
 #[tokio::main]
 async fn main() {
-    // charge .env en dev (ne panique pas si absent)
     let _ = dotenvy::dotenv();
 
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL not set");
@@ -41,7 +43,6 @@ async fn main() {
         .execute(&db)
         .await
         .expect("enable FKs");
-
 
     let state = AppState {
         db,
@@ -65,8 +66,10 @@ async fn main() {
         .route("/health", get(health::health))
         .nest("/auth", auth::router())
         .nest("/api", profile::router())
-        .nest("/api", routes::cv::router()) 
+        .nest("/api", routes::cv::router())
         .nest("/api", routes::cv_normalized::router())
+        .nest("/api/cv", cv_normalized::router())
+        .nest("/api", skills::routes()) 
         .merge(assets_router)
         .merge(dashboard_router)
         .with_state(state);
