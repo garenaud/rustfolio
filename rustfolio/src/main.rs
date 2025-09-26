@@ -28,6 +28,8 @@ use tower_http::services::ServeDir;
 use crate::middleware::require_auth;
 use crate::routes::{api, auth, health, pages, profile};
 use crate::state::AppState;
+use crate::routes::skills;
+use crate::routes::cv_normalized;
 
 #[tokio::main]
 async fn main() {
@@ -66,7 +68,8 @@ async fn main() {
         .nest("/api", profile::router())
         .nest("/api", routes::cv::router())
         .nest("/api", routes::cv_normalized::router())
-        .nest("/api", routes::skills::routes()) 
+        .nest("/api/cv", cv_normalized::router())
+        .nest("/api", skills::routes()) 
         .merge(assets_router)
         .merge(dashboard_router)
         .with_state(state);

@@ -1,8 +1,8 @@
 use axum::{
     extract::{Path, State},
-    routing::{delete, get, put, post},
     Json, Router,
 };
+use axum::routing::{get, put, post, delete};
 use serde_json::json;
 use sqlx::{Pool, Sqlite};
 
@@ -11,10 +11,8 @@ use crate::types::{CvData, Experience, Profile, Project, Skill};
 
 use serde::{Deserialize, Serialize};
 use axum::http::StatusCode;
+
 type HandlerResult<T> = std::result::Result<T, (StatusCode, String)>;
-
-mod skills;
-
 
 /* =============================================================================
    DTOs & helpers
@@ -68,7 +66,6 @@ pub fn router() -> Router<AppState> {
         .route("/cv/projects/:id/tech", get(list_project_tech).post(add_project_tech))
         .route("/cv/projects/:id/tech/:tech_id", delete(delete_project_tech))
 }
-
 
 /* =============================================================================
    BULK
@@ -216,7 +213,8 @@ async fn create_experience(State(st): State<AppState>, Json(mut e): Json<Experie
 
     let date_start = normalize_date_like(&e.date_start);
     let date_end = normalize_date_like(&e.date_end);
-    let id = sqlx::query!(
+
+    let res = sqlx::query!(
         r#"
         INSERT INTO experiences
           (user_id, date_start, date_end, kind, title, company, location, website, updated_at)
@@ -234,8 +232,8 @@ async fn create_experience(State(st): State<AppState>, Json(mut e): Json<Experie
     )
     .execute(&st.db)
     .await
-    .unwrap()
-    .last_insert_rowid();
+    .unwrap();
+    let id = res.last_insert_rowid();
 
     e.id = Some(id);
     // tasks seront ajoutées via l’endpoint dédié
@@ -317,15 +315,15 @@ async fn add_task(
 ) -> Json<TaskItem> {
     let task = body.get("task").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
 
-    let new_id = sqlx::query!(
+    let res = sqlx::query!(
         "INSERT INTO experience_tasks (experience_id, task) VALUES (?, ?)",
         id,
         task
     )
     .execute(&st.db)
     .await
-    .unwrap()
-    .last_insert_rowid();
+    .unwrap();
+    let new_id = res.last_insert_rowid();
 
     Json(TaskItem { id: new_id, task })
 }
@@ -411,7 +409,7 @@ async fn replace_experiences_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Exp
         let date_start = normalize_date_like(&e.date_start);
         let date_end = normalize_date_like(&e.date_end);
 
-        let id = sqlx::query!(
+        let res = sqlx::query!(
             r#"
             INSERT INTO experiences
             (user_id, date_start, date_end, kind, title, company, location, website, updated_at)
@@ -428,8 +426,8 @@ async fn replace_experiences_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Exp
             e.website
         )
         .execute(db)
-        .await?
-        .last_insert_rowid();
+        .await?;
+        let id = res.last_insert_rowid();
 
         for t in &e.tasks {
             sqlx::query!(
@@ -443,7 +441,6 @@ async fn replace_experiences_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Exp
     }
     Ok(())
 }
-
 
 async fn list_skills_inner(db: &Pool<Sqlite>, user_id: &str) -> sqlx::Result<Vec<Skill>> {
     let rows = sqlx::query!(
@@ -507,7 +504,7 @@ async fn list_projects(State(st): State<AppState>) -> Json<Vec<Project>> {
 
 async fn create_project(State(st): State<AppState>, Json(mut p): Json<Project>) -> Json<Project> {
     let user_id = uid();
-    let id = sqlx::query!(
+    let res = sqlx::query!(
         r#"
         INSERT INTO projects
           (user_id, title, description, category, repo_link, pdf_link, image, updated_at)
@@ -524,8 +521,8 @@ async fn create_project(State(st): State<AppState>, Json(mut p): Json<Project>) 
     )
     .execute(&st.db)
     .await
-    .unwrap()
-    .last_insert_rowid();
+    .unwrap();
+    let id = res.last_insert_rowid();
 
     p.id = Some(id);
     Json(p)
@@ -700,7 +697,7 @@ async fn replace_projects_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Projec
         .await?;
 
     for p in list {
-        let id = sqlx::query!(
+        let res = sqlx::query!(
             r#"
             INSERT INTO projects
               (user_id, title, description, category, repo_link, pdf_link, image, updated_at)
@@ -716,8 +713,8 @@ async fn replace_projects_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Projec
             p.image
         )
         .execute(db)
-        .await?
-        .last_insert_rowid();
+        .await?;
+        let id = res.last_insert_rowid();
 
         for t in &p.technologies {
             sqlx::query!(
@@ -732,14 +729,14 @@ async fn replace_projects_inner(db: &Pool<Sqlite>, user_id: &str, list: &[Projec
     Ok(())
 }
 
-pub fn mount_skills_routes(state: AppState) -> Router {
+/* pub fn mount_skills_routes(state: AppState) -> Router {
     Router::new()
         .route("/api/cv/skills", get(list_skills).post(create_skill))
         .with_state(state.clone())
         .route("/api/cv/skills/:id", put(update_skill).delete(delete_skill))
         .route("/api/cv/skills/categories", get(list_skill_categories))
         .with_state(state)
-}
+} */
 
 async fn list_skills(
     State(db): State<&sqlx::SqlitePool>,
@@ -755,7 +752,8 @@ async fn list_skills(
         auth.id
     )
     .fetch_all(db)
-    .await?;
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let out = rows
         .into_iter()
@@ -777,20 +775,24 @@ async fn create_skill(
     auth: crate::auth::AuthUser,
     Json(s): Json<crate::types::SkillIn>,
 ) -> HandlerResult<Json<crate::types::SkillOut>> {
-    let id = sqlx::query!(
+    // TEMP avant l'appel SQL (évite le .map(...) dans les args)
+    let perc_i64 = s.percentage.map(|p| p as i64);
+
+    let res = sqlx::query!(
         r#"
         INSERT INTO skills (user_id, name, percentage, logo_url, category, updated_at)
         VALUES (?,?,?,?,?, CURRENT_TIMESTAMP)
         "#,
         auth.id,
         s.name,
-        s.percentage.map(|p| p as i64),
+        perc_i64,
         s.logo_url,
         s.category
     )
     .execute(db)
-    .await?
-    .last_insert_rowid();
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let id = res.last_insert_rowid();
 
     Ok(Json(crate::types::SkillOut {
         id,
@@ -807,6 +809,9 @@ async fn update_skill(
     Path(id): Path<i64>,
     Json(s): Json<crate::types::SkillIn>,
 ) -> Result<Json<crate::types::SkillOut>, (StatusCode, String)> {
+    // TEMP avant l'appel SQL (évite le .map(...) dans les args)
+    let perc_i64 = s.percentage.map(|p| p as i64);
+
     // sécurité: ne mettre à jour que la ligne de l'utilisateur
     sqlx::query!(
         r#"
@@ -815,14 +820,15 @@ async fn update_skill(
         WHERE id = ? AND user_id = ?
         "#,
         s.name,
-        s.percentage.map(|p| p as i64),
+        perc_i64,
         s.logo_url,
         s.category,
         id,
         auth.id
     )
     .execute(db)
-    .await?;
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(crate::types::SkillOut {
         id,
@@ -847,7 +853,8 @@ async fn delete_skill(
         auth.id
     )
     .execute(db)
-    .await?;
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(())
 }
 
@@ -864,8 +871,9 @@ async fn list_skill_categories(
         "#,
         auth.id
     )
-    .fetch_all(db).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    //.await?;
+    .fetch_all(db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    Ok(Json(rows.into_iter().map(|r| r.category).collect()))
+    Ok(Json(rows.into_iter().map(|r| r.category.unwrap_or_default()).collect()))
 }

@@ -1,8 +1,7 @@
-// src/routes/skills.rs
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    routing::{delete, get, post, put},
+    routing::{get, put}, // pas d'import `post` ici
     Json, Router,
 };
 use crate::state::AppState;
@@ -49,7 +48,7 @@ async fn list_skills(
             name: r.name,
             percentage: r.percentage.and_then(|p| u8::try_from(p).ok()),
             logo_url: r.logo_url,
-            category: r.category,
+            category: r.category.unwrap_or_default(),
         })
         .collect();
 
@@ -61,6 +60,9 @@ async fn create_skill(
     auth: crate::auth::AuthUser,
     Json(s): Json<SkillIn>,
 ) -> HandlerResult<Json<SkillOut>> {
+    // éviter le temporaire dans les args SQLx
+    let perc_i64 = s.percentage.map(|p| i64::from(p));
+
     let res = sqlx::query!(
         r#"
         INSERT INTO skills (user_id, name, percentage, logo_url, category, updated_at)
@@ -68,7 +70,7 @@ async fn create_skill(
         "#,
         auth.id,
         s.name,
-        s.percentage.map(|p| i64::from(p)),
+        perc_i64,
         s.logo_url,
         s.category
     )
@@ -101,7 +103,7 @@ async fn create_skill(
         name: r.name,
         percentage: r.percentage.and_then(|p| u8::try_from(p).ok()),
         logo_url: r.logo_url,
-        category: r.category,
+        category: r.category.unwrap_or_default(),
     }))
 }
 
@@ -111,6 +113,9 @@ async fn update_skill(
     Path(id): Path<i64>,
     Json(s): Json<SkillIn>,
 ) -> HandlerResult<Json<SkillOut>> {
+    // éviter le temporaire dans les args SQLx
+    let perc_i64 = s.percentage.map(|p| i64::from(p));
+
     sqlx::query!(
         r#"
         UPDATE skills
@@ -123,7 +128,7 @@ async fn update_skill(
         WHERE id = ? AND user_id = ?
         "#,
         s.name,
-        s.percentage.map(|p| i64::from(p)),
+        perc_i64,
         s.logo_url,
         s.category,
         id,
@@ -156,7 +161,7 @@ async fn update_skill(
         name: r.name,
         percentage: r.percentage.and_then(|p| u8::try_from(p).ok()),
         logo_url: r.logo_url,
-        category: r.category,
+        category: r.category.unwrap_or_default(),
     }))
 }
 
@@ -186,7 +191,7 @@ async fn list_skill_categories(
 ) -> HandlerResult<Json<Vec<String>>> {
     let rows = sqlx::query!(
         r#"
-        SELECT DISTINCT category AS "category!: String"
+        SELECT DISTINCT category AS "category?: String"
         FROM skills
         WHERE user_id = ? AND category IS NOT NULL
         ORDER BY category COLLATE NOCASE
@@ -197,5 +202,5 @@ async fn list_skill_categories(
     .await
     .map_err(ise)?;
 
-    Ok(Json(rows.into_iter().map(|r| r.category).collect()))
+    Ok(Json(rows.into_iter().map(|r| r.category.unwrap_or_default()).collect()))
 }
