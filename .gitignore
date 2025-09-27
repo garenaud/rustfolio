@@ -12,6 +12,8 @@
 .cargo/registry/
 .cargo/git/
 .lock
+Cargo.lock
+dashboard-spa.js
 
 # Environment files
 .env

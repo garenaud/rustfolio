@@ -36,18 +36,25 @@ async fn main() {
         .await
         .expect("failed to connect DB");
 
-    // --- State partagé (sans données JSON) ---
+    // --- State partagé ---
     let state = AppState {
         db,
-        // si ces champs existent encore dans AppState, on les initialise vides
         _experiences: Arc::new(Vec::<data::Experience>::new()),
         projects:     Arc::new(Vec::<data::Project>::new()),
         skills:       Arc::new(Vec::<data::Skill>::new()),
     };
 
     // --- Assets statiques globaux ---
+    // Sert /assets depuis le dossier local "assets"
+    // et applique automatiquement le bon Content-Type (dont application/wasm)
+    // + support des fichiers précompressés .br/.gz
     let assets_router = Router::new()
-        .nest_service("/assets", ServeDir::new("assets"));
+        .nest_service(
+            "/assets",
+            ServeDir::new("assets")
+                .precompressed_br()
+                .precompressed_gzip(),
+        );
 
     // --- Dashboard protégé (shell SSR qui charge la SPA Yew) ---
     let dashboard_router = Router::new()
@@ -57,21 +64,14 @@ async fn main() {
 
     // --- App principale ---
     let app = Router::new()
-        // Pages SSR
         .route("/", get(pages::home))
-        // API publiques
         .route("/api/info", get(api::info_handler))
         .route("/api/projects", get(api::api_projects))
-        // Santé
         .route("/health", get(health::health))
-        // Auth & profil
         .nest("/auth", auth::router())
         .nest("/api", profile::router())
-        // Assets
         .merge(assets_router)
-        // Dashboard
         .merge(dashboard_router)
-        // State global
         .with_state(state);
 
     // --- Serveur HTTP ---

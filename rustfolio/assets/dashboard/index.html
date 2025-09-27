@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <title>Dashboard SPA</title>
-  <link rel="modulepreload" href="/assets/dashboard/dashboard-spa.js" crossorigin=anonymous integrity="sha384-lyd1c+OpJ2m28muUp4wuP2Z1GIhzDfFbWYvUrue4dkZSCBM06Yh5ioAgJla6Li4F"><link rel="preload" href="/assets/dashboard/dashboard-spa_bg.wasm" crossorigin=anonymous integrity="sha384-pcsHHpG6uROAFV1AjRgF7O8KIiL6ab97mvZo7crAbwWg1UGnIC56+SNpr24LBDWM" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/assets/dashboard/dashboard-spa.js" crossorigin=anonymous integrity="sha384-9l/QJIQZSYdOdDdQk8OFRC3h9Ylk1e2q65V4icxqfberZbGQPpB0ziB24FIOIC5y"><link rel="preload" href="/assets/dashboard/dashboard-spa_bg.wasm" crossorigin=anonymous integrity="sha384-00IvsRLhQbfAJBXmVPd5cDbiLqTpwaIaUoZo9b19LiUThqf5fveJu04RCdiECzFr" as="fetch" type="application/wasm"></head>
   <body>
     <div id="dashboard-root"></div>
     
-<script type="module" nonce="QYbZwLpqC0ucwdwmlAFb+w==">
+<script type="module" nonce="OrxoEljRYOlSivNk3armRg==">
 import init, * as bindings from '/assets/dashboard/dashboard-spa.js';
-const wasm = await init('/assets/dashboard/dashboard-spa_bg.wasm');
+const wasm = await init({ module_or_path: '/assets/dashboard/dashboard-spa_bg.wasm' });
 
 
 window.wasmBindings = bindings;
