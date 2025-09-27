@@ -3,6 +3,58 @@
   <head>
     <meta charset="utf-8" />
     <title>Dashboard SPA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg:#0b0e13; --panel:#121721; --text:#e6e6e6; --muted:#9aa4b2; --line:#222935;
+        --radius:10px;
+      }
+      html, body { height: 100%; }
+      body { margin:0; overflow-x:hidden; background:var(--bg); color:var(--text); }
+
+      /* Conteneur générique pour les pages du SPA */
+      .container { padding:16px; max-width:1200px; margin:0 auto; }
+      .error { color:#ff6b6b; margin:8px 0; }
+      .ok    { color:#29d391; margin:8px 0; }
+
+      /* Grille responsive des champs du profil */
+      .form-grid {
+        display:grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap:12px;
+        background:var(--panel);
+        padding:16px;
+        border-radius: var(--radius);
+        border:1px solid var(--line);
+      }
+      input, textarea {
+        width:100%;
+        padding:10px 12px;
+        border-radius:8px;
+        border:1px solid var(--line);
+        background:#0f141b;
+        color:var(--text);
+        box-sizing:border-box;
+      }
+
+      /* Subnav compacte (si tu enveloppes la 2e barre dans <div class="subnav"> …) */
+      .subnav {
+        position: sticky; top: 56px;
+        z-index: 40;
+        background: rgba(9,12,17,0.75);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid var(--line);
+        overflow-x: auto; white-space: nowrap;
+      }
+      .subnav a, .subnav button {
+        display:inline-block;
+        padding:10px 12px;
+        text-decoration:none;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .subnav .active { color:#fff; }
+    </style>
   </head>
   <body>
     <div id="dashboard-root"></div>

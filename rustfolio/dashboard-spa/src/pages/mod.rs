@@ -1,5 +1,4 @@
 pub mod account;
-pub mod builder;
 pub mod overview;
 pub mod profile;
 pub mod cv_form;

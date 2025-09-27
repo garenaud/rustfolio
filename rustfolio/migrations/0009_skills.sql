@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS skills (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  percentage INTEGER NOT NULL CHECK (percentage BETWEEN 0 AND 100),
+  logo TEXT DEFAULT '',
+  category TEXT DEFAULT '',
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_skills_user ON skills(user_id);

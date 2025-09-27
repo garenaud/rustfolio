@@ -1,0 +1,1 @@
+ALTER TABLE experiences ADD COLUMN website TEXT NOT NULL DEFAULT '';

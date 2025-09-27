@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use crate::components::nav::Nav;
+use crate::pages::nav::Nav;
 use crate::router::{switch, Route};
 
 pub struct App;
