@@ -36,3 +36,7 @@ docker-data/
 *.sqlite3
 *.lock
 *.wasm
+
+rustfolio/assets/dashboard/*
+rustfolio/assets/dashboard/dashboard-spa.js
+/assets/dashboard/index.html
