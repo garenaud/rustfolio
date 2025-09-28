@@ -4,6 +4,7 @@ pub mod profile;
 pub mod cv_form;
 pub mod nav;
 pub mod builder_sidebar;
+pub mod builder;  
 
 
 pub use account::Account;

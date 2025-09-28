@@ -20,15 +20,17 @@ services:
 
   yew:
     build:
-      context: ./rustfolio
-      dockerfile: Dockerfile.yew   
+      context: .
+      dockerfile: Dockerfile.yew   # <= on utilise TON Dockerfile.yew
     working_dir: /work
-    ports:
-      - "8081:8081"
+    # IMPORTANT: pas de TRUNK_LOG ici (sinon conflit avec -v du CMD)
     volumes:
-      - ./rustfolio:/work:Z   
-      - wasm-registry:/usr/local/cargo/registry
-      - wasm-target:/usr/local/cargo/target
+      - ./rustfolio/dashboard-spa:/work:Z
+      - ./rustfolio/assets:/assets:Z
+      - wasm-registry:/root/.cargo/registry
+      - wasm-target:/root/target
+    # pas de "command:" -> on garde le CMD du Dockerfile.yew
+    # ce CMD lance: trunk watch --release --dist /assets/dashboard ...
 
   app:
     build:

@@ -88,8 +88,4 @@ done
 # Rien ici : déjà géré par labels + compose.
 
 echo "✅ Clean terminé pour '${PROJECT_NAME}'."
-<<<<<<< HEAD
 echo "   Astuce: relance un build propre avec:  docker compose build --no-cache && docker compose up -d"
-=======
-echo "   Astuce: relance un build propre avec:  docker compose build --no-cache && docker compose up -d"
->>>>>>> origin/main
