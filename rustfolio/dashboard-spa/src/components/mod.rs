@@ -1,2 +1,3 @@
-//! Reusable UI components live here.
-//! (Empty for now — add submodules when you actually create files in `src/components/`.)
+pub mod nav;
+pub use nav::Nav;
+pub mod add_row_placeholder;

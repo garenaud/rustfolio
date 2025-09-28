@@ -44,6 +44,7 @@ async fn main() {
         .await
         .expect("enable FKs");
 
+    // --- State partagé ---
     let state = AppState {
         db,
         _experiences: Arc::new(Vec::<data::Experience>::new()),
@@ -51,8 +52,17 @@ async fn main() {
         skills:       Arc::new(Vec::<data::Skill>::new()),
     };
 
+    // --- Assets statiques globaux ---
+    // Sert /assets depuis le dossier local "assets"
+    // et applique automatiquement le bon Content-Type (dont application/wasm)
+    // + support des fichiers précompressés .br/.gz
     let assets_router = Router::new()
-        .nest_service("/assets", ServeDir::new("assets"));
+        .nest_service(
+            "/assets",
+            ServeDir::new("assets")
+                .precompressed_br()
+                .precompressed_gzip(),
+        );
 
     let dashboard_router = Router::new()
         .route("/dashboard", get(pages::dashboard_shell))

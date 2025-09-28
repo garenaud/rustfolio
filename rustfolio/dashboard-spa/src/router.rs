@@ -21,6 +21,6 @@ pub fn switch(route: Route) -> Html {
         Route::Overview => html! { <overview::Overview /> },
         Route::Profile => html!(<Profile />),
         Route::Account  => html! { <account::Account /> },
-        Route::Builder  => html! { <builder::BuilderPage /> },
+        Route::Builder  => html! { <builder::Builder /> },
     }
 }
