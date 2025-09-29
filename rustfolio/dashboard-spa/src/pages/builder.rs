@@ -1,61 +1,75 @@
 use yew::prelude::*;
 use yewdux::prelude::*;
+use wasm_bindgen_futures::spawn_local;
+
 use crate::components::add_row_placeholder::AddRowPlaceholder;
 use crate::pages::builder_sidebar::BuilderSidebar;
 use crate::store_builder::{BuilderLayout, WidgetKind};
+use crate::store_cv::CVStore; // ← assure-toi d'avoir ce module (je peux te le renvoyer)
 
 #[function_component(Builder)]
 pub fn builder() -> Html {
     let (layout, dispatch) = use_store::<BuilderLayout>();
+    let (cv, cv_dispatch) = use_store::<CVStore>();
+
+    // Charger la DB au montage (fallback sur démo en cas d'erreur)
+    {
+        let cv_dispatch = cv_dispatch.clone();
+        use_effect_with((), move |_| {
+            spawn_local(async move {
+                match CVStore::fetch_all().await {
+                    Ok(data) => cv_dispatch.set(data),
+                    Err(e) => cv_dispatch.reduce_mut(|st| {
+                        st.last_error = Some(format!("fetch_all failed: {e}"));
+                        st.load_demo();
+                    }),
+                }
+            });
+            || ()
+        });
+    }
 
     // Actions
     let on_add_row = {
         let dispatch = dispatch.clone();
         Callback::from(move |_| dispatch.reduce_mut(|st| st.add_row()))
     };
-
     let on_select_row = {
         let dispatch = dispatch.clone();
         Callback::from(move |row_id: usize| dispatch.reduce_mut(|st| st.select_row(row_id)))
     };
-
     let on_select_column = {
         let dispatch = dispatch.clone();
         Callback::from(move |col_id: usize| dispatch.reduce_mut(|st| st.select_column(col_id)))
     };
-
     let on_split = {
         let dispatch = dispatch.clone();
         Callback::from(move |n: usize| dispatch.reduce_mut(|st| st.split_selected_row(n)))
     };
-
     let on_add_widget = {
         let dispatch = dispatch.clone();
         Callback::from(move |w: WidgetKind| dispatch.reduce_mut(|st| st.add_widget_to_selected_column(w.clone())))
     };
-
-    // Option de sauvegarde (placeholder)
     let on_save = {
         let layout = layout.clone();
         Callback::from(move |_| {
-            web_sys::console::log_1(&format!("[DEV] Sauvegarde layout JSON: rows={}", &layout.rows.len()).into());
+            web_sys::console::log_1(&format!("[DEV] Layout rows={}", layout.rows.len()).into());
         })
     };
 
     html! {
-        <div class="builder-wrap" style="display:grid;grid-template-columns:280px 1fr;gap:18px;">
+        <div style="display:grid;grid-template-columns:280px 1fr;gap:18px;">
             <aside>
                 <BuilderSidebar
                     on_save={on_save}
                     selected_row={layout.selected_row}
-                    selected_column={layout.selected_column}     // NEW
+                    selected_column={layout.selected_column}
                     on_split={on_split}
-                    on_add_widget={on_add_widget}               // NEW
+                    on_add_widget={on_add_widget}
                 />
             </aside>
 
             <main>
-                // bouton/placeholder pour ajouter une ligne
                 <AddRowPlaceholder on_add={Callback::from({
                     let on_add_row = on_add_row.clone();
                     move |_| on_add_row.emit(())
@@ -77,9 +91,8 @@ pub fn builder() -> Html {
                         );
 
                         html! {
-                            <section class="row" style="margin:18px 0;">
+                            <section style="margin:18px 0;">
                                 <div
-                                    class={classes!("row-card")}
                                     style={format!(
                                         "background:#0e1523;border:1px solid {};border-radius:12px;overflow:hidden;{}",
                                         if selected_row { "#3a5bff" } else { "#25304a" },
@@ -100,7 +113,6 @@ pub fn builder() -> Html {
                                                     let id = col.id;
                                                     Callback::from(move |_| on_select_column.emit(id))
                                                 };
-
                                                 html!{
                                                     <div
                                                         style={format!(
@@ -110,27 +122,20 @@ pub fn builder() -> Html {
                                                         )}
                                                         onclick={on_col_click}
                                                     >
-                                                        // header de colonne: bouton +
                                                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;opacity:.9;">
                                                             <span style="font-size:.85rem;">{ format!("Colonne #{}", col.id) }</span>
-                                                            <button
-                                                                title="Ajouter un contenu"
-                                                                style="border:1px solid #2a3552;border-radius:6px;padding:2px 8px;font-weight:600;"
-                                                            >
-                                                                { "+" }
-                                                            </button>
+                                                            <span style="opacity:.6;font-size:.85rem;">{ "+" }</span>
                                                         </div>
 
-                                                        // contenu des widgets (placeholder preview)
                                                         <div style="display:flex;flex-direction:column;gap:8px;">
                                                             {
                                                                 for col.widgets.iter().map(|w| {
-                                                                    render_widget_preview(w)
+                                                                    render_widget_preview_with_cv(w, &cv)
                                                                 })
                                                             }
                                                             {
                                                                 if col.widgets.is_empty() {
-                                                                    html! { <div style="opacity:.6;font-size:.9rem;">{ "Aucun contenu. Cliquez sur la colonne puis ajoutez un widget dans la sidebar." }</div> }
+                                                                    html!{ <div style="opacity:.6;font-size:.9rem;">{ "Aucun contenu. Sélectionne la colonne puis ajoute un widget (sidebar)." }</div> }
                                                                 } else { Html::default() }
                                                             }
                                                         </div>
@@ -149,7 +154,7 @@ pub fn builder() -> Html {
     }
 }
 
-fn render_widget_preview(w: &WidgetKind) -> Html {
+fn render_widget_preview_with_cv(w: &WidgetKind, cv: &CVStore) -> Html {
     match w {
         WidgetKind::Text(t) => html! {
             <div style="background:#111a2d;border:1px solid #22304f;border-radius:8px;padding:8px;">
@@ -157,29 +162,82 @@ fn render_widget_preview(w: &WidgetKind) -> Html {
                 <div style="font-size:.95rem;color:#c8d1e6;">{ t }</div>
             </div>
         },
-        WidgetKind::ProfileBasic => html! {
-            <div style="background:#111a2d;border:1px solid #22304f;border-radius:8px;padding:8px;">
-                <div style="font-size:.8rem;opacity:.7;margin-bottom:4px;">{ "Profil (nom + titre)" }</div>
-                <div style="font-size:.95rem;color:#c8d1e6;">{ "Aperçu — sera peuplé depuis la DB (Profile)" }</div>
-            </div>
+        WidgetKind::ProfileBasic => {
+            if let Some(p) = &cv.profile {
+                html! {
+                    <div style="background:#111a2d;border:1px solid #22304f;border-radius:8px;padding:10px;">
+                        <div style="font-size:1rem;font-weight:700;color:#e4e9f9;">{ format!("{} {}", p.first_name, p.last_name) }</div>
+                        <div style="font-size:.95rem;opacity:.85;color:#c8d1e6;">{ &p.title }</div>
+                        <div style="margin-top:6px;font-size:.85rem;opacity:.7;">
+                            { &p.location }{ " · " }{ &p.email }
+                            { if let Some(w) = &p.website { html!{ <>{" · "}{ w }</> } } else { Html::default() } }
+                        </div>
+                    </div>
+                }
+            } else {
+                html! { <div style="opacity:.7;">{ "Profil non chargé" }</div> }
+            }
         },
-        WidgetKind::ExperienceTimeline => html! {
-            <div style="background:#111a2d;border:1px solid #22304f;border-radius:8px;padding:8px;">
-                <div style="font-size:.8rem;opacity:.7;margin-bottom:4px;">{ "Expériences" }</div>
-                <div style="font-size:.95rem;color:#c8d1e6;">{ "Aperçu — timeline basée sur tes expériences (DB)" }</div>
-            </div>
+        WidgetKind::ExperienceTimeline => {
+            html! {
+                <div style="background:#111a2d;border:1px solid #22304f;border-radius:8px;padding:10px;">
+                    <div style="font-size:.9rem;opacity:.85;margin-bottom:6px;">{ "Expériences" }</div>
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        {
+                            for cv.experiences.iter().map(|e| {
+                                html!{
+                                    <div style="border-left:3px solid #3a5bff;padding-left:10px;">
+                                        <div style="font-weight:600;color:#e4e9f9;">{ format!("{} — {}", e.title, e.company) }</div>
+                                        <div style="font-size:.85rem;opacity:.8;">{ &e.date }</div>
+                                        {
+                                            if !e.tasks.is_empty() {
+                                                html!{ <div style="font-size:.9rem;color:#c8d1e6;margin-top:4px;">{ e.tasks.join(" • ") }</div> }
+                                            } else { Html::default() }
+                                        }
+                                    </div>
+                                }
+                            })
+                        }
+                    </div>
+                </div>
+            }
         },
-        WidgetKind::SkillsGrid => html! {
-            <div style="background:#111a2d;border:1px solid #22304f;border-radius:8px;padding:8px;">
-                <div style="font-size:.8rem;opacity:.7;margin-bottom:4px;">{ "Compétences" }</div>
-                <div style="font-size:.95rem;color:#c8d1e6;">{ "Aperçu — grilles/groupes depuis la DB Skills" }</div>
-            </div>
+        WidgetKind::SkillsGrid => {
+            html! {
+                <div style="background:#111a2d;border:1px solid #22304f;border-radius:8px;padding:10px;">
+                    <div style="font-size:.9rem;opacity:.85;margin-bottom:6px;">{ "Compétences" }</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        {
+                            for cv.skills.iter().map(|s| {
+                                html!{
+                                    <span style="font-size:.8rem;opacity:.9;border:1px solid #2a3552;border-radius:6px;padding:2px 6px;">
+                                        { format!("{} ({}%)", s.name, s.percentage) }
+                                    </span>
+                                }
+                            })
+                        }
+                    </div>
+                </div>
+            }
         },
-        WidgetKind::ProjectsList => html! {
-            <div style="background:#111a2d;border:1px solid #22304f;border-radius:8px;padding:8px;">
-                <div style="font-size:.8rem;opacity:.7;margin-bottom:4px;">{ "Projets" }</div>
-                <div style="font-size:.95rem;color:#c8d1e6;">{ "Aperçu — liste de projets (DB)" }</div>
-            </div>
+        WidgetKind::ProjectsList => {
+            html! {
+                <div style="background:#111a2d;border:1px solid #22304f;border-radius:8px;padding:10px;">
+                    <div style="font-size:.9rem;opacity:.85;margin-bottom:6px;">{ "Projets" }</div>
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        {
+                            for cv.projects.iter().map(|p| {
+                                html!{
+                                    <div style="border:1px dashed #22304f;border-radius:8px;padding:8px;">
+                                        <div style="font-weight:600;color:#e4e9f9;">{ &p.title }</div>
+                                        <div style="font-size:.9rem;color:#c8d1e6;">{ &p.description }</div>
+                                    </div>
+                                }
+                            })
+                        }
+                    </div>
+                </div>
+            }
         },
     }
 }
