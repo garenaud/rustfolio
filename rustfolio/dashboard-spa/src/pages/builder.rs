@@ -5,14 +5,14 @@ use wasm_bindgen_futures::spawn_local;
 use crate::components::add_row_placeholder::AddRowPlaceholder;
 use crate::pages::builder_sidebar::BuilderSidebar;
 use crate::store_builder::{BuilderLayout, WidgetKind};
-use crate::store_cv::CVStore; // ← assure-toi d'avoir ce module (je peux te le renvoyer)
+use crate::store_cv::CVStore;
 
 #[function_component(Builder)]
 pub fn builder() -> Html {
     let (layout, dispatch) = use_store::<BuilderLayout>();
     let (cv, cv_dispatch) = use_store::<CVStore>();
 
-    // Charger la DB au montage (fallback sur démo en cas d'erreur)
+    // Fetch DB au montage (fallback demo si erreur)
     {
         let cv_dispatch = cv_dispatch.clone();
         use_effect_with((), move |_| {
@@ -78,10 +78,12 @@ pub fn builder() -> Html {
                 {
                     for layout.rows.iter().map(|row| {
                         let selected_row = layout.selected_row == Some(row.id);
+
+                        // NOTE: onclick sur la "carte" de ligne — normal, pas besoin d'arrêter la propagation ici.
                         let on_row_click = {
                             let on_select_row = on_select_row.clone();
                             let id = row.id;
-                            Callback::from(move |_| on_select_row.emit(id))
+                            Callback::from(move |_e: MouseEvent| on_select_row.emit(id))
                         };
 
                         let n = row.columns.len().max(1);
@@ -108,11 +110,17 @@ pub fn builder() -> Html {
                                         {
                                             for row.columns.iter().map(|col| {
                                                 let selected_col = layout.selected_column == Some(col.id);
+
+                                                // ⛔ IMPORTANT : arrêter la propagation pour ne PAS déclencher le onclick de la ligne
                                                 let on_col_click = {
                                                     let on_select_column = on_select_column.clone();
                                                     let id = col.id;
-                                                    Callback::from(move |_| on_select_column.emit(id))
+                                                    Callback::from(move |e: MouseEvent| {
+                                                        e.stop_propagation();
+                                                        on_select_column.emit(id);
+                                                    })
                                                 };
+
                                                 html!{
                                                     <div
                                                         style={format!(
