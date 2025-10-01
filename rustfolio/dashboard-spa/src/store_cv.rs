@@ -1,10 +1,9 @@
 use serde::{Deserialize, Serialize};
 use yewdux::store::Store;
 use gloo_net::http::Request;
+use web_sys::console;
 
-/// Types alignés sur les endpoints JSON de l’API.
-/// Adapte les noms de champs si besoin (ajoute #[serde(rename="...")] si ton backend diffère).
-
+// ================== TYPES ==================
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Default)]
 pub struct Profile {
     pub first_name: String,
@@ -51,6 +50,7 @@ pub struct Project {
     pub technologies: Vec<String>,
 }
 
+// ================== STORE ==================
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Default)]
 pub struct CVStore {
     pub loaded: bool,
@@ -59,39 +59,31 @@ pub struct CVStore {
     pub skills: Vec<Skill>,
     pub projects: Vec<Project>,
     pub last_error: Option<String>,
+    /// "api::<URL>" si succès, "demo" si fallback
+    pub source: Option<String>,
 }
 
 impl CVStore {
-    /// Charge tout depuis l’API (séquentiel pour éviter d’ajouter la dépendance `futures`)
     pub async fn fetch_all() -> Result<Self, String> {
-        // NOTE: Si ton API est servie ailleurs, remplace par URL absolues:
-        // "http://localhost:8080/api/cv/profile", etc.
-        let profile: Profile = Request::get("/api/cv/profile")
-            .send().await.map_err(err)?
-            .json().await.map_err(err)?;
-        let experiences: Vec<Experience> = Request::get("/api/cv/experiences")
-            .send().await.map_err(err)?
-            .json().await.map_err(err)?;
-        let skills: Vec<Skill> = Request::get("/api/cv/skills")
-            .send().await.map_err(err)?
-            .json().await.map_err(err)?;
-        let projects: Vec<Project> = Request::get("/api/cv/projects")
-            .send().await.map_err(err)?
-            .json().await.map_err(err)?;
+        let bases = candidate_bases();
+
+        let p = get_json_multi::<Profile>(&bases, &["/api/cv/profile", "/api/cv_normalized/profile"]).await?;
+        let e = get_json_multi::<Vec<Experience>>(&bases, &["/api/cv/experiences", "/api/cv_normalized/experiences"]).await?;
+        let s = get_json_multi::<Vec<Skill>>(&bases, &["/api/cv/skills", "/api/cv_normalized/skills"]).await?;
+        let pr = get_json_multi::<Vec<Project>>(&bases, &["/api/cv/projects", "/api/cv_normalized/projects"]).await?;
 
         Ok(Self {
             loaded: true,
-            profile: Some(profile),
-            experiences,
-            skills,
-            projects,
+            profile: Some(p.data),
+            experiences: e.data,
+            skills: s.data,
+            projects: pr.data,
             last_error: None,
+            source: Some(format!("api::{}", pr.url)),
         })
     }
 
-    /// Fallback démo si l’API n’est pas joignable
     pub fn load_demo(&mut self) {
-        if self.loaded { return; }
         self.profile = Some(Profile {
             first_name: "Jane".into(),
             last_name:  "Doe".into(),
@@ -118,6 +110,7 @@ impl CVStore {
             }
         ];
         self.loaded = true;
+        self.source = Some("demo".into());
     }
 }
 
@@ -126,4 +119,62 @@ impl Store for CVStore {
     fn should_notify(&self, old: &Self) -> bool { self != old }
 }
 
-fn err<E: std::fmt::Display>(e: E) -> String { e.to_string() }
+// ============== HELPERS (avec URL de succès/erreur remontée) ==============
+
+struct FetchOk<T> { data: T, url: String }
+
+async fn get_json_multi<T: for<'de> serde::Deserialize<'de>>(bases: &[String], paths: &[&str]) -> Result<FetchOk<T>, String> {
+    let mut last_err = String::new();
+    for &path in paths {
+        for base in bases {
+            match try_get_json::<T>(base, path).await {
+                Ok((data, url)) => return Ok(FetchOk { data, url }),
+                Err(e) => {
+                    last_err = e.clone();
+                    console::warn_1(&format!("[CVStore] fail {}{} → {}", base, path, e).into());
+                }
+            }
+        }
+    }
+    Err(last_err)
+}
+
+async fn try_get_json<T: for<'de> serde::Deserialize<'de>>(base: &str, path: &str) -> Result<(T, String), String> {
+    let url = if base.is_empty() { path.to_string() } else { format!("{base}{path}") };
+    console::log_1(&format!("[CVStore] GET {}", url).into());
+
+    let resp = Request::get(&url)
+        .send().await
+        .map_err(|e| format!("network: {e} ({url})"))?;
+
+    let status: u16 = resp.status();
+    if !(200..=299).contains(&status) {
+        let text = resp.text().await.unwrap_or_default();
+        return Err(format!("http {}: {} ({url})", status, truncate(&text, 200)));
+    }
+
+    let data = resp.json::<T>().await
+        .map_err(|e| format!("json: {e} ({url})"))?;
+
+    Ok((data, url))
+}
+
+fn truncate(s: &str, n: usize) -> String {
+    if s.len() > n { format!("{}…", &s[..n]) } else { s.to_string() }
+}
+
+/// Bases candidates simples, sans introspection du window (élimine les soucis de features web-sys).
+/// - "" (relatif, utile si le serveur 8081 proxifie /api)
+/// - même origine supposée: http://localhost:8081
+/// - API directe fréquente: http://localhost:8080 / 127.0.0.1:808{0,1}
+/// - service docker: http://api:8080
+fn candidate_bases() -> Vec<String> {
+    vec![
+        String::new(),
+        "http://localhost:8081".into(),
+        "http://127.0.0.1:8081".into(),
+        "http://localhost:8080".into(),
+        "http://127.0.0.1:8080".into(),
+        "http://api:8080".into(),
+    ]
+}
