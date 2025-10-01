@@ -12,7 +12,7 @@ pub fn builder() -> Html {
     let (layout, dispatch) = use_store::<BuilderLayout>();
     let (cv, cv_dispatch) = use_store::<CVStore>();
 
-    // Fetch DB au montage (fallback demo si erreur)
+    // Fetch DB au montage (garde une démo + message si ça échoue)
     {
         let cv_dispatch = cv_dispatch.clone();
         use_effect_with((), move |_| {
@@ -20,7 +20,8 @@ pub fn builder() -> Html {
                 match CVStore::fetch_all().await {
                     Ok(data) => cv_dispatch.set(data),
                     Err(e) => cv_dispatch.reduce_mut(|st| {
-                        st.last_error = Some(format!("fetch_all failed: {e}"));
+                        st.last_error = Some(e);
+                        st.source = Some("demo".into());
                         st.load_demo();
                     }),
                 }
@@ -57,6 +58,31 @@ pub fn builder() -> Html {
         })
     };
 
+    // --------- BANNIÈRE D'ÉTAT (calculée hors du html!) ----------
+    let banner: Html = {
+        let src = cv.source.clone();
+        let err = cv.last_error.clone();
+        if src.is_some() || err.is_some() {
+            html! {
+                <div style="margin-bottom:10px;padding:8px 10px;border:1px solid #2a3552;border-radius:8px;background:#10192e;">
+                    {
+                        if let Some(s) = src {
+                            html!{ <span style="opacity:.85;">{ format!("Source des données: {}", s) }</span> }
+                        } else { Html::default() }
+                    }
+                    {
+                        if let Some(e) = err {
+                            html!{ <span style="color:#ff9f9f;margin-left:6px;">{ format!("— Erreur: {}", e) }</span> }
+                        } else { Html::default() }
+                    }
+                </div>
+            }
+        } else {
+            Html::default()
+        }
+    };
+    // -------------------------------------------------------------
+
     html! {
         <div style="display:grid;grid-template-columns:280px 1fr;gap:18px;">
             <aside>
@@ -70,6 +96,8 @@ pub fn builder() -> Html {
             </aside>
 
             <main>
+                { banner }
+
                 <AddRowPlaceholder on_add={Callback::from({
                     let on_add_row = on_add_row.clone();
                     move |_| on_add_row.emit(())
@@ -79,7 +107,6 @@ pub fn builder() -> Html {
                     for layout.rows.iter().map(|row| {
                         let selected_row = layout.selected_row == Some(row.id);
 
-                        // NOTE: onclick sur la "carte" de ligne — normal, pas besoin d'arrêter la propagation ici.
                         let on_row_click = {
                             let on_select_row = on_select_row.clone();
                             let id = row.id;
@@ -111,7 +138,7 @@ pub fn builder() -> Html {
                                             for row.columns.iter().map(|col| {
                                                 let selected_col = layout.selected_column == Some(col.id);
 
-                                                // ⛔ IMPORTANT : arrêter la propagation pour ne PAS déclencher le onclick de la ligne
+                                                // IMPORTANT: stop propagation pour garder la sélection de colonne
                                                 let on_col_click = {
                                                     let on_select_column = on_select_column.clone();
                                                     let id = col.id;
