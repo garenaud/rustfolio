@@ -67,10 +67,10 @@ impl CVStore {
     pub async fn fetch_all() -> Result<Self, String> {
         let bases = candidate_bases();
 
-        let p = get_json_multi::<Profile>(&bases, &["/api/cv/profile", "/api/cv_normalized/profile"]).await?;
-        let e = get_json_multi::<Vec<Experience>>(&bases, &["/api/cv/experiences", "/api/cv_normalized/experiences"]).await?;
-        let s = get_json_multi::<Vec<Skill>>(&bases, &["/api/cv/skills", "/api/cv_normalized/skills"]).await?;
-        let pr = get_json_multi::<Vec<Project>>(&bases, &["/api/cv/projects", "/api/cv_normalized/projects"]).await?;
+        let p  = get_json_multi::<Profile>(&bases, &["/api/cv/profile"]).await?;
+        let e  = get_json_multi::<Vec<Experience>>(&bases, &["/api/cv/experiences"]).await?;
+        let s  = get_json_multi::<Vec<Skill>>(&bases, &["/api/cv/skills"]).await?;
+        let pr = get_json_multi::<Vec<Project>>(&bases, &["/api/cv/projects"]).await?;
 
         Ok(Self {
             loaded: true,
@@ -163,18 +163,10 @@ fn truncate(s: &str, n: usize) -> String {
     if s.len() > n { format!("{}…", &s[..n]) } else { s.to_string() }
 }
 
-/// Bases candidates simples, sans introspection du window (élimine les soucis de features web-sys).
-/// - "" (relatif, utile si le serveur 8081 proxifie /api)
-/// - même origine supposée: http://localhost:8081
-/// - API directe fréquente: http://localhost:8080 / 127.0.0.1:808{0,1}
-/// - service docker: http://api:8080
 fn candidate_bases() -> Vec<String> {
     vec![
-        String::new(),
-        "http://localhost:8081".into(),
-        "http://127.0.0.1:8081".into(),
-        "http://localhost:8080".into(),
+        String::new(), 
+        "http://localhost:8080".into(), 
         "http://127.0.0.1:8080".into(),
-        "http://api:8080".into(),
     ]
 }
